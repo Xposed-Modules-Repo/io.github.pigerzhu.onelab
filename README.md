@@ -10,7 +10,7 @@ OneLab 是一个面向三星设备的 LSPosed 模块，重点补充系统中无�
 
 ## 下载
 
-- [OneLab 0.1.0 Beta 1 APK](releases/OneLab-v0.1.0-beta.1.apk)
+- [OneLab 0.1.0 Beta 1 APK](https://github.com/pigerzhu/OneLab/releases/download/v0.1.0-beta.1/OneLab-v0.1.0-beta.1.apk)
 
 ## 主要功能
 

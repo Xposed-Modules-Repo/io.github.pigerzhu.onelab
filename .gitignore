@@ -17,7 +17,7 @@ samsung_probe.sh
 ui-texts.txt
 *.zip
 *.apk
-!releases/*.apk
+releases/
 *.db
 *.db-wal
 *.db-shm
