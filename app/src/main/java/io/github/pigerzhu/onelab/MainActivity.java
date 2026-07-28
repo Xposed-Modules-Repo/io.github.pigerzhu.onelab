@@ -1,0 +1,542 @@
+package io.github.pigerzhu.onelab;
+
+import android.app.Activity;
+import android.content.Context;
+import android.content.Intent;
+import android.content.res.ColorStateList;
+import android.content.res.Configuration;
+import android.os.Build;
+import android.os.Bundle;
+import android.view.Gravity;
+import android.view.animation.Interpolator;
+import android.view.animation.PathInterpolator;
+import android.view.View;
+import android.view.ViewGroup;
+import android.widget.FrameLayout;
+import android.widget.ImageButton;
+import android.widget.LinearLayout;
+import android.widget.ScrollView;
+import android.widget.Toast;
+import android.window.OnBackInvokedCallback;
+import android.window.OnBackInvokedDispatcher;
+
+import androidx.dynamicanimation.animation.DynamicAnimation;
+import androidx.dynamicanimation.animation.SpringAnimation;
+import androidx.dynamicanimation.animation.SpringForce;
+
+import com.google.android.material.card.MaterialCardView;
+import com.google.android.material.color.DynamicColors;
+
+import io.github.pigerzhu.onelab.system.SettingsStore;
+import io.github.pigerzhu.onelab.ui.AppTheme;
+import io.github.pigerzhu.onelab.ui.ChoiceGroup;
+import io.github.pigerzhu.onelab.ui.Ui;
+
+public class MainActivity extends Activity {
+    private static final Interpolator PAGE_EASING =
+            new PathInterpolator(0.2f, 0f, 0f, 1f);
+    private static final long PAGE_ANIMATION_MS = 360L;
+    private static final float ENTER_SPRING_STIFFNESS = 300f;
+    private static final float ENTER_SPRING_DAMPING = 1f;
+    private static final float EXIT_SPRING_STIFFNESS = 340f;
+    private static final float EXIT_SPRING_DAMPING = 1f;
+
+    private Ui ui;
+    private NetworkScreen networkScreen;
+    private GalleryLabsScreen galleryLabsScreen;
+    private BiliFoldGateScreen biliFoldGateScreen;
+    private CtripSplitRulesScreen ctripSplitRulesScreen;
+    private UmetripSplitRulesScreen umetripSplitRulesScreen;
+    private MeituanSplitRulesScreen meituanSplitRulesScreen;
+    private TongchengSplitRulesScreen tongchengSplitRulesScreen;
+    private XiaomiShopFoldScreen xiaomiShopFoldScreen;
+    private QqFoldLayoutScreen qqFoldLayoutScreen;
+    private XhsFoldVideoScreen xhsFoldVideoScreen;
+    private WindowManagementScreen windowManagementScreen;
+    private ProcessingSpeedScreen processingSpeedScreen;
+    private CoverScreen coverScreen;
+    private CoverEdgeScreen coverEdgeScreen;
+    private ThermalScreen thermalScreen;
+    private GameHeatScreen gameHeatScreen;
+    private AspectRatioScreen aspectRatioScreen;
+    private RefreshRateScreen refreshRateScreen;
+    private DiagnosticsScreen diagnosticsScreen;
+    boolean showingHomePage = true;
+    Runnable nestedBackAction;
+    private boolean pageTransitionRunning;
+    private long lastBackPressMs;
+    private FrameLayout pageHost;
+    private View currentPageView;
+    private boolean largeScreenLayout;
+    private int selectedTopLevel = -1;
+    private FoldSidebar foldSidebar;
+
+    @Override
+    protected void attachBaseContext(Context newBase) {
+        super.attachBaseContext(AppTheme.wrap(newBase));
+    }
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        DynamicColors.applyToActivityIfAvailable(this);
+        super.onCreate(savedInstanceState);
+        ui = new Ui(this);
+        SettingsStore settings = new SettingsStore(this);
+        networkScreen = new NetworkScreen(this, ui, settings);
+        galleryLabsScreen = new GalleryLabsScreen(this, ui, settings);
+        biliFoldGateScreen = new BiliFoldGateScreen(this, ui, settings);
+        ctripSplitRulesScreen = new CtripSplitRulesScreen(this, ui, settings);
+        umetripSplitRulesScreen = new UmetripSplitRulesScreen(this, ui, settings);
+        meituanSplitRulesScreen = new MeituanSplitRulesScreen(this, ui, settings);
+        tongchengSplitRulesScreen = new TongchengSplitRulesScreen(this, ui, settings);
+        xiaomiShopFoldScreen = new XiaomiShopFoldScreen(this, ui, settings);
+        qqFoldLayoutScreen = new QqFoldLayoutScreen(this, ui, settings);
+        xhsFoldVideoScreen = new XhsFoldVideoScreen(this, ui, settings);
+        windowManagementScreen = new WindowManagementScreen(this, ui, settings);
+        processingSpeedScreen = new ProcessingSpeedScreen(this, ui, settings);
+        thermalScreen = new ThermalScreen(this, ui, settings);
+        gameHeatScreen = new GameHeatScreen(this, ui, settings);
+        coverScreen = new CoverScreen(this, ui);
+        coverEdgeScreen = new CoverEdgeScreen(this, ui);
+        AppListPage appList = new AppListPage(this, ui);
+        aspectRatioScreen = new AspectRatioScreen(this, ui, settings, appList);
+        refreshRateScreen = new RefreshRateScreen(this, ui, settings, appList);
+        diagnosticsScreen = new DiagnosticsScreen(this, ui);
+        registerBackGestureCallback();
+        largeScreenLayout = isLargeScreen(getResources().getConfiguration());
+        buildNavigationShell();
+        if (largeScreenLayout) {
+            showLargeScreenPrompt();
+        } else {
+            showHomePage();
+        }
+    }
+
+    @Override
+    public void onConfigurationChanged(Configuration newConfig) {
+        super.onConfigurationChanged(newConfig);
+        boolean useLargeLayout = isLargeScreen(newConfig);
+        if (useLargeLayout != largeScreenLayout) {
+            recreate();
+        }
+    }
+
+    @Override
+    protected void onDestroy() {
+        if (coverScreen != null) coverScreen.onDestroy();
+        if (coverEdgeScreen != null) coverEdgeScreen.onDestroy();
+        if (processingSpeedScreen != null) processingSpeedScreen.onDestroy();
+        if (diagnosticsScreen != null) diagnosticsScreen.onDestroy();
+        super.onDestroy();
+    }
+
+    @Override
+    public void onBackPressed() {
+        handleBackNavigation();
+    }
+
+    private void registerBackGestureCallback() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return;
+        OnBackInvokedCallback callback = this::handleBackNavigation;
+        getOnBackInvokedDispatcher().registerOnBackInvokedCallback(
+                OnBackInvokedDispatcher.PRIORITY_DEFAULT, callback);
+    }
+
+    private void handleBackNavigation() {
+        if (pageTransitionRunning) return;
+        if (nestedBackAction != null) {
+            Runnable action = nestedBackAction;
+            nestedBackAction = null;
+            action.run();
+            return;
+        }
+        if (!showingHomePage) {
+            if (largeScreenLayout) {
+                showLargeScreenPrompt();
+            } else {
+                showHomePage(true);
+            }
+            return;
+        }
+        long now = System.currentTimeMillis();
+        if (now - lastBackPressMs < 1600L) {
+            finish();
+            return;
+        }
+        lastBackPressMs = now;
+        Toast.makeText(this, "再返回一次退出", Toast.LENGTH_SHORT).show();
+    }
+
+    private void showHomePage() {
+        showHomePage(false);
+    }
+
+    private void showHomePage(boolean animateBack) {
+        if (largeScreenLayout) {
+            showLargeScreenPrompt();
+            return;
+        }
+        showingHomePage = true;
+        selectedTopLevel = -1;
+        nestedBackAction = null;
+        LinearLayout root = beginPage(animateBack ? -1 : 0);
+
+        LinearLayout header = new LinearLayout(this);
+        header.setGravity(Gravity.CENTER_VERTICAL);
+        header.setOrientation(LinearLayout.HORIZONTAL);
+        root.addView(header, ui.matchWrap());
+
+        LinearLayout heading = new LinearLayout(this);
+        heading.setOrientation(LinearLayout.VERTICAL);
+        header.addView(heading, new LinearLayout.LayoutParams(
+                0, ViewGroup.LayoutParams.WRAP_CONTENT, 1));
+        heading.addView(ui.text("OneLab", 34, true, ui.colorOnSurface));
+        heading.addView(ui.text(
+                "One UI tweaks and behavior fixes", 16, false, ui.colorOnSurfaceVariant));
+
+        ImageButton appearanceButton = new ImageButton(this);
+        appearanceButton.setImageResource(R.drawable.ic_settings);
+        appearanceButton.setImageTintList(ColorStateList.valueOf(ui.colorOnSurface));
+        appearanceButton.setBackgroundColor(android.graphics.Color.TRANSPARENT);
+        appearanceButton.setPadding(ui.dp(12), ui.dp(12), ui.dp(12), ui.dp(12));
+        appearanceButton.setContentDescription("外观设置");
+        appearanceButton.setTooltipText("外观设置");
+        appearanceButton.setOnClickListener(v -> showAppearanceSettingsPage());
+        LinearLayout.LayoutParams appearanceParams = new LinearLayout.LayoutParams(
+                ui.dp(48), ui.dp(48));
+        appearanceParams.setMarginStart(ui.dp(12));
+        header.addView(appearanceButton, appearanceParams);
+
+        ui.addSpace(root, 20);
+        root.addView(ui.homeButton(R.drawable.ic_home_connectivity, Ui.HOME_NETWORK,
+                "网络与连接", "认证页保活与连接实验", v -> showNetworkPage()));
+        root.addView(ui.homeButton(R.drawable.ic_home_performance, Ui.HOME_PERFORMANCE,
+                "性能与温控", "处理速度、SIOP 稳帧", v -> showPerformancePage()));
+        root.addView(ui.homeButton(R.drawable.ic_home_system, Ui.HOME_SYSTEM,
+                "系统界面", "窗口与系统 UI 相关隐藏开关", v -> showSystemUiPage()));
+        root.addView(ui.homeButton(R.drawable.ic_home_apps, Ui.HOME_APPS,
+                "应用程序", "应用功能扩展", v -> showSamsungAppsPage()));
+        root.addView(ui.homeButton(R.drawable.ic_home_experiments, Ui.HOME_EXPERIMENTS,
+                "实验功能", "", v -> showExperimentsPage()));
+    }
+
+    private void showAppearanceSettingsPage() {
+        selectedTopLevel = -1;
+        if (foldSidebar != null) {
+            foldSidebar.setSelectedSection(-1);
+            foldSidebar.collapse();
+        }
+        showingHomePage = false;
+        nestedBackAction = null;
+        LinearLayout root = beginSubPage(
+                "外观设置", "选择 OneLab 的显示主题。", topLevelEnterDirection());
+
+        MaterialCardView card = ui.card();
+        LinearLayout body = ui.cardBody();
+        card.addView(body);
+        body.addView(ui.text("主题", 20, true, ui.colorOnSurface));
+        ui.addSpace(body, 14);
+
+        ChoiceGroup themeGroup = new ChoiceGroup(this, ui);
+        body.addView(themeGroup, ui.matchWrap());
+        themeGroup.addOption("跟随系统", "使用手机当前的深色模式设置", AppTheme.MODE_SYSTEM);
+        themeGroup.addOption("浅色", "始终使用浅色界面", AppTheme.MODE_LIGHT);
+        themeGroup.addOption("深色", "始终使用深色界面", AppTheme.MODE_DARK);
+        themeGroup.setValue(AppTheme.getMode(this));
+        themeGroup.setOnChoiceChangedListener(mode -> {
+            if (mode != AppTheme.getMode(this)) {
+                AppTheme.setMode(this, mode);
+                recreate();
+            }
+        });
+        root.addView(card);
+        root.addView(diagnosticsScreen.card());
+    }
+
+    private void showNetworkPage() {
+        markTopLevel(Ui.HOME_NETWORK);
+        nestedBackAction = null;
+        LinearLayout root = beginSubPage(
+                "网络与连接", "和网络登录、连接相关的功能。", topLevelEnterDirection());
+        root.addView(networkScreen.card());
+    }
+
+    private void showPerformancePage() {
+        showPerformancePage(false);
+    }
+
+    private void showPerformancePage(boolean animateBack) {
+        markTopLevel(Ui.HOME_PERFORMANCE);
+        nestedBackAction = null;
+        LinearLayout root = beginSubPage(
+                "性能与温控", "处理速度、游戏热预算、隐藏温控和充电状态。",
+                animateBack ? -1 : topLevelEnterDirection());
+        root.addView(thermalScreen.sdhmsThermalMasterCard());
+        root.addView(processingSpeedScreen.card());
+        root.addView(thermalScreen.sdhmsHiddenThermalCard());
+    }
+
+    private void showSystemUiPage() {
+        showSystemUiPage(false);
+    }
+
+    void showSystemUiPage(boolean animateBack) {
+        markTopLevel(Ui.HOME_SYSTEM);
+        nestedBackAction = null;
+        LinearLayout root = beginSubPage(
+                "系统界面", "系统窗口和 SystemUI 相关功能。",
+                animateBack ? -1 : topLevelEnterDirection());
+        root.addView(windowManagementScreen.persistFreeformBoundsCard());
+        root.addView(coverScreen.outerSystemCard());
+        root.addView(refreshRateScreen.entryCard());
+        root.addView(aspectRatioScreen.entryCard());
+        root.addView(coverScreen.card());
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        coverScreen.onActivityResult(requestCode, resultCode, data);
+    }
+
+    private void showSamsungAppsPage() {
+        markTopLevel(Ui.HOME_APPS);
+        nestedBackAction = null;
+        LinearLayout root = beginSubPage(
+                "应用程序", "应用功能扩展。", topLevelEnterDirection());
+        root.addView(galleryLabsScreen.card());
+        root.addView(biliFoldGateScreen.card());
+        root.addView(ctripSplitRulesScreen.card());
+        root.addView(umetripSplitRulesScreen.card());
+        root.addView(meituanSplitRulesScreen.card());
+        root.addView(qqFoldLayoutScreen.card());
+        root.addView(xhsFoldVideoScreen.card());
+        root.addView(tongchengSplitRulesScreen.card());
+        root.addView(xiaomiShopFoldScreen.card());
+    }
+
+    private void showExperimentsPage() {
+        showExperimentsPage(false);
+    }
+
+    void showExperimentsPage(boolean animateBack) {
+        markTopLevel(Ui.HOME_EXPERIMENTS);
+        nestedBackAction = null;
+        LinearLayout root = beginSubPage(
+                "实验功能", "保留探索性质的小功能",
+                animateBack ? -1 : topLevelEnterDirection());
+        root.addView(gameHeatScreen.entryCard());
+        root.addView(thermalScreen.entryCard());
+        root.addView(coverEdgeScreen.entryCard());
+    }
+
+    private LinearLayout beginPage(int animationDirection) {
+        ScrollView scrollView = new ScrollView(this);
+        scrollView.setFillViewport(true);
+        scrollView.setBackgroundColor(ui.colorSurface);
+
+        LinearLayout root = new LinearLayout(this);
+        root.setOrientation(LinearLayout.VERTICAL);
+        root.setPadding(ui.dp(24), ui.dp(28), ui.dp(24), ui.dp(28));
+        scrollView.addView(root, ui.matchWrap());
+        switchPage(scrollView, animationDirection);
+        return root;
+    }
+
+    private void buildNavigationShell() {
+        pageHost = new FrameLayout(this);
+        pageHost.setBackgroundColor(ui.colorSurface);
+        currentPageView = null;
+
+        if (!largeScreenLayout) {
+            foldSidebar = null;
+            setContentView(pageHost);
+            return;
+        }
+
+        LinearLayout shell = new LinearLayout(this);
+        shell.setOrientation(LinearLayout.HORIZONTAL);
+        shell.setBackgroundColor(ui.colorSurface);
+        foldSidebar = new FoldSidebar(this, ui, selectedTopLevel, new FoldSidebar.Listener() {
+            @Override
+            public void onSectionSelected(int section) {
+                selectedTopLevel = section;
+                foldSidebar.setSelectedSection(section);
+                foldSidebar.collapse();
+                showTopLevel(section);
+            }
+
+            @Override
+            public void onAppearanceSelected() {
+                showAppearanceSettingsPage();
+            }
+        });
+        shell.addView(foldSidebar.view());
+
+        LinearLayout.LayoutParams hostParams = new LinearLayout.LayoutParams(
+                0, ViewGroup.LayoutParams.MATCH_PARENT, 1);
+        hostParams.setMargins(ui.dp(6), ui.dp(12), ui.dp(12), ui.dp(12));
+        shell.addView(pageHost, hostParams);
+        setContentView(shell);
+    }
+
+    private void showLargeScreenPrompt() {
+        showingHomePage = true;
+        nestedBackAction = null;
+        selectedTopLevel = -1;
+        if (foldSidebar != null) {
+            foldSidebar.setSelectedSection(-1);
+            foldSidebar.expand();
+        }
+
+        LinearLayout prompt = new LinearLayout(this);
+        prompt.setGravity(Gravity.CENTER);
+        prompt.setOrientation(LinearLayout.VERTICAL);
+        prompt.setPadding(ui.dp(32), ui.dp(32), ui.dp(32), ui.dp(32));
+        prompt.addView(ui.text("选择一个功能", 26, true, ui.colorOnSurface));
+        ui.addSpace(prompt, 8);
+        prompt.addView(ui.text(
+                "从左侧菜单选择要查看的内容", 15, false, ui.colorOnSurfaceVariant));
+        switchPage(prompt, 0);
+    }
+
+    private void showTopLevel(int section) {
+        switch (section) {
+            case Ui.HOME_NETWORK:
+                showNetworkPage();
+                break;
+            case Ui.HOME_PERFORMANCE:
+                showPerformancePage();
+                break;
+            case Ui.HOME_SYSTEM:
+                showSystemUiPage();
+                break;
+            case Ui.HOME_APPS:
+                showSamsungAppsPage();
+                break;
+            case Ui.HOME_EXPERIMENTS:
+                showExperimentsPage();
+                break;
+            default:
+                showLargeScreenPrompt();
+                break;
+        }
+    }
+
+    private void markTopLevel(int section) {
+        selectedTopLevel = section;
+        if (foldSidebar != null) {
+            foldSidebar.setSelectedSection(section);
+        }
+    }
+
+    private static boolean isLargeScreen(Configuration configuration) {
+        return configuration.screenWidthDp >= 600;
+    }
+
+    private int topLevelEnterDirection() {
+        return largeScreenLayout ? 0 : 1;
+    }
+
+    private LinearLayout beginSubPage(String title, String subtitle) {
+        return beginSubPage(title, subtitle, 1);
+    }
+
+    LinearLayout beginSubPage(String title, String subtitle, int animationDirection) {
+        showingHomePage = false;
+        LinearLayout root = beginPage(animationDirection);
+        root.addView(ui.text(title, 32, true, ui.colorOnSurface));
+        root.addView(ui.text(subtitle, 15, false, ui.colorOnSurfaceVariant));
+        ui.addSpace(root, 20);
+        return root;
+    }
+
+    void switchPage(View nextPage, int direction) {
+        View previousPage = currentPageView;
+        currentPageView = nextPage;
+        pageHost.addView(nextPage, new FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+
+        if (previousPage == null || direction == 0) {
+            if (previousPage != null) pageHost.removeView(previousPage);
+            nextPage.setTranslationX(0f);
+            nextPage.setAlpha(1f);
+            return;
+        }
+        if (direction > 0) {
+            animateDetailIn(previousPage, nextPage);
+        } else {
+            animateDetailOut(previousPage, nextPage);
+        }
+    }
+
+    private void animateDetailIn(View previousPage, View nextPage) {
+        int width = getResources().getDisplayMetrics().widthPixels;
+        pageTransitionRunning = true;
+        nextPage.setTranslationX(width);
+        nextPage.setAlpha(1f);
+        previousPage.setTranslationX(0f);
+        previousPage.setAlpha(1f);
+
+        previousPage.animate()
+                .translationX(-width * 0.16f)
+                .alpha(0.92f)
+                .setDuration(PAGE_ANIMATION_MS)
+                .setInterpolator(PAGE_EASING)
+                .start();
+
+        nextPage.animate()
+                .alpha(1f)
+                .setDuration(PAGE_ANIMATION_MS)
+                .setInterpolator(PAGE_EASING)
+                .start();
+        springTranslationX(
+                nextPage, 0f, ENTER_SPRING_STIFFNESS, ENTER_SPRING_DAMPING,
+                (animation, canceled, value, velocity) -> {
+                    pageHost.removeView(previousPage);
+                    pageTransitionRunning = false;
+                });
+    }
+
+    private void animateDetailOut(View previousPage, View nextPage) {
+        pageTransitionRunning = true;
+        int width = getResources().getDisplayMetrics().widthPixels;
+        nextPage.setTranslationX(-width * 0.16f);
+        nextPage.setAlpha(0.92f);
+        previousPage.bringToFront();
+
+        nextPage.animate()
+                .alpha(1f)
+                .setDuration(PAGE_ANIMATION_MS)
+                .setInterpolator(PAGE_EASING)
+                .start();
+        springTranslationX(
+                nextPage, 0f, EXIT_SPRING_STIFFNESS, EXIT_SPRING_DAMPING, null);
+        springTranslationX(
+                previousPage, width, EXIT_SPRING_STIFFNESS, EXIT_SPRING_DAMPING,
+                (animation, canceled, value, velocity) -> {
+                    pageHost.removeView(previousPage);
+                    pageTransitionRunning = false;
+                });
+    }
+
+    private void springTranslationX(
+            View view,
+            float finalPosition,
+            float stiffness,
+            float damping,
+            DynamicAnimation.OnAnimationEndListener endListener
+    ) {
+        SpringForce force = new SpringForce(finalPosition)
+                .setStiffness(stiffness)
+                .setDampingRatio(damping);
+        SpringAnimation animation = new SpringAnimation(
+                view, DynamicAnimation.TRANSLATION_X);
+        animation.setSpring(force);
+        animation.setMinimumVisibleChange(0.5f);
+        if (endListener != null) {
+            animation.addEndListener(endListener);
+        }
+        animation.start();
+    }
+}

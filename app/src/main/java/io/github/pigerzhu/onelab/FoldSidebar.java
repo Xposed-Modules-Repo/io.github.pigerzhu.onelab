@@ -1,0 +1,330 @@
+package io.github.pigerzhu.onelab;
+
+import android.animation.Animator;
+import android.animation.AnimatorListenerAdapter;
+import android.animation.ValueAnimator;
+import android.content.Context;
+import android.content.res.ColorStateList;
+import android.graphics.Color;
+import android.graphics.drawable.GradientDrawable;
+import android.view.Gravity;
+import android.view.MotionEvent;
+import android.view.View;
+import android.view.ViewConfiguration;
+import android.view.ViewGroup;
+import android.view.animation.PathInterpolator;
+import android.widget.ImageButton;
+import android.widget.ImageView;
+import android.widget.LinearLayout;
+import android.widget.Space;
+import android.widget.TextView;
+
+import com.google.android.material.card.MaterialCardView;
+
+import io.github.pigerzhu.onelab.ui.Ui;
+
+/** Samsung-style navigation rail used only on the unfolded large display. */
+final class FoldSidebar {
+    private static final PathInterpolator WIDTH_EASING =
+            new PathInterpolator(0.2f, 0f, 0f, 1f);
+    interface Listener {
+        void onSectionSelected(int section);
+
+        void onAppearanceSelected();
+    }
+
+    private static final long WIDTH_ANIMATION_MS = 220L;
+
+    private final MainActivity host;
+    private final Ui ui;
+    private final Listener listener;
+    private final MaterialCardView card;
+    private final LinearLayout content;
+    private boolean expanded;
+    private boolean targetExpanded;
+    private ValueAnimator widthAnimator;
+    private int selectedSection;
+
+    FoldSidebar(MainActivity host, Ui ui, int selectedSection, Listener listener) {
+        this.host = host;
+        this.ui = ui;
+        this.listener = listener;
+        this.selectedSection = selectedSection;
+        expanded = selectedSection < 0;
+        targetExpanded = expanded;
+
+        card = new SidebarCard(host);
+        card.setRadius(ui.dp(24));
+        card.setCardElevation(0);
+        card.setStrokeWidth(0);
+        card.setCardBackgroundColor(ui.colorSurfaceContainer);
+        card.setLayoutParams(shellParams(widthFor(expanded)));
+
+        content = new LinearLayout(host);
+        content.setOrientation(LinearLayout.VERTICAL);
+        content.setPadding(ui.dp(12), ui.dp(14), ui.dp(12), ui.dp(14));
+        card.addView(content, new ViewGroup.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+        rebuild();
+    }
+
+    View view() {
+        return card;
+    }
+
+    void setSelectedSection(int section) {
+        selectedSection = section;
+        rebuild();
+    }
+
+    void expand() {
+        setExpanded(true, true);
+    }
+
+    void collapse() {
+        setExpanded(false, true);
+    }
+
+    private void setExpanded(boolean value, boolean animate) {
+        if (targetExpanded == value) return;
+        targetExpanded = value;
+        if (widthAnimator != null) {
+            widthAnimator.cancel();
+            widthAnimator = null;
+        }
+        int targetWidth = widthFor(value);
+        if (!animate) {
+            expanded = value;
+            rebuild();
+            card.getLayoutParams().width = targetWidth;
+            card.requestLayout();
+            return;
+        }
+        if (value) {
+            expanded = true;
+            rebuild();
+        }
+        int startWidth = card.getWidth() > 0 ? card.getWidth() : card.getLayoutParams().width;
+        ValueAnimator animator = ValueAnimator.ofInt(startWidth, targetWidth);
+        widthAnimator = animator;
+        animator.setDuration(WIDTH_ANIMATION_MS);
+        animator.setInterpolator(WIDTH_EASING);
+        animator.addUpdateListener(valueAnimator -> {
+            card.getLayoutParams().width = (Integer) valueAnimator.getAnimatedValue();
+            card.requestLayout();
+        });
+        animator.addListener(new AnimatorListenerAdapter() {
+            @Override
+            public void onAnimationEnd(Animator animation) {
+                if (widthAnimator == animation) {
+                    widthAnimator = null;
+                }
+                if (!targetExpanded) {
+                    expanded = false;
+                    rebuild();
+                }
+            }
+        });
+        animator.start();
+    }
+
+    private void rebuild() {
+        content.removeAllViews();
+        content.addView(header());
+        addGap(16);
+        addSection(R.drawable.ic_home_connectivity, "网络与连接", Ui.HOME_NETWORK);
+        addSection(R.drawable.ic_home_performance, "性能与温控", Ui.HOME_PERFORMANCE);
+        addSection(R.drawable.ic_home_system, "系统界面", Ui.HOME_SYSTEM);
+        addSection(R.drawable.ic_home_apps, "应用程序", Ui.HOME_APPS);
+        addSection(R.drawable.ic_home_experiments, "实验功能", Ui.HOME_EXPERIMENTS);
+
+        Space spacer = new Space(host);
+        content.addView(spacer, new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, 0, 1));
+        if (!expanded) {
+            content.addView(iconButton(
+                    R.drawable.ic_settings, "外观设置", v -> listener.onAppearanceSelected()),
+                    centeredIconParams());
+        }
+    }
+
+    private View header() {
+        LinearLayout header = new LinearLayout(host);
+        header.setGravity(Gravity.CENTER_VERTICAL);
+        header.setOrientation(LinearLayout.HORIZONTAL);
+        header.addView(iconButton(R.drawable.ic_menu, expanded ? "收起菜单" : "展开菜单",
+                v -> setExpanded(!targetExpanded, true)), iconParams());
+
+        if (expanded) {
+            Space spacer = new Space(host);
+            header.addView(spacer, new LinearLayout.LayoutParams(0, 1, 1));
+            header.addView(iconButton(
+                    R.drawable.ic_settings, "外观设置", v -> listener.onAppearanceSelected()),
+                    iconParams());
+        }
+        return header;
+    }
+
+    private void addSection(int iconRes, String label, int section) {
+        boolean selected = selectedSection == section;
+        LinearLayout row = new LinearLayout(host);
+        row.setGravity(expanded ? Gravity.CENTER_VERTICAL : Gravity.CENTER);
+        row.setOrientation(LinearLayout.HORIZONTAL);
+        row.setClickable(true);
+        row.setFocusable(true);
+        row.setContentDescription(label);
+        row.setOnClickListener(v -> {
+            selectedSection = section;
+            listener.onSectionSelected(section);
+        });
+        row.setBackground(rowBackground(selected));
+        if (expanded) {
+            row.setPadding(ui.dp(14), ui.dp(8), ui.dp(10), ui.dp(8));
+        } else {
+            row.setPadding(0, ui.dp(8), 0, ui.dp(8));
+        }
+        ImageView icon = new ImageView(host);
+        icon.setImageResource(iconRes);
+        icon.setImageTintList(ColorStateList.valueOf(
+                selected ? ui.colorOnPrimaryContainer : ui.colorOnSurfaceVariant));
+        row.addView(icon, new LinearLayout.LayoutParams(ui.dp(32), ui.dp(32)));
+
+        if (expanded) {
+            LinearLayout.LayoutParams textParams = new LinearLayout.LayoutParams(
+                    0, ViewGroup.LayoutParams.WRAP_CONTENT, 1);
+            textParams.setMarginStart(ui.dp(18));
+            TextView labelView = ui.text(label, 18, selected, selected
+                    ? ui.colorOnPrimaryContainer : ui.colorOnSurface);
+            labelView.setSingleLine(true);
+            labelView.setEllipsize(null);
+            labelView.setHorizontallyScrolling(true);
+            row.addView(labelView, textParams);
+        }
+
+        LinearLayout.LayoutParams rowParams = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ui.dp(58));
+        rowParams.setMargins(0, 0, 0, ui.dp(6));
+        content.addView(row, rowParams);
+    }
+
+    private ImageButton iconButton(int iconRes, String description, View.OnClickListener listener) {
+        ImageButton button = new ImageButton(host);
+        button.setImageResource(iconRes);
+        button.setImageTintList(ColorStateList.valueOf(ui.colorOnSurface));
+        button.setBackgroundColor(Color.TRANSPARENT);
+        button.setPadding(ui.dp(12), ui.dp(12), ui.dp(12), ui.dp(12));
+        button.setContentDescription(description);
+        button.setTooltipText(description);
+        button.setOnClickListener(listener);
+        return button;
+    }
+
+    private GradientDrawable rowBackground(boolean selected) {
+        GradientDrawable background = new GradientDrawable();
+        background.setColor(selected ? ui.colorPrimaryContainer : Color.TRANSPARENT);
+        background.setCornerRadius(ui.dp(12));
+        return background;
+    }
+
+    private LinearLayout.LayoutParams shellParams(int width) {
+        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
+                width, ViewGroup.LayoutParams.MATCH_PARENT);
+        params.setMargins(ui.dp(12), statusBarTopMargin(), ui.dp(6), ui.dp(12));
+        return params;
+    }
+
+    private int statusBarTopMargin() {
+        int resourceId = host.getResources().getIdentifier(
+                "status_bar_height", "dimen", "android");
+        int statusBarHeight = resourceId == 0
+                ? ui.dp(24)
+                : host.getResources().getDimensionPixelSize(resourceId);
+        return statusBarHeight + ui.dp(8);
+    }
+
+    private LinearLayout.LayoutParams iconParams() {
+        return new LinearLayout.LayoutParams(ui.dp(52), ui.dp(52));
+    }
+
+    private LinearLayout.LayoutParams centeredIconParams() {
+        LinearLayout.LayoutParams params = iconParams();
+        params.gravity = Gravity.CENTER_HORIZONTAL;
+        return params;
+    }
+
+    private int widthFor(boolean value) {
+        return ui.dp(value ? 300 : 84);
+    }
+
+    private final class SidebarCard extends MaterialCardView {
+        private final int touchSlop;
+        private float downX;
+        private float downY;
+        private boolean horizontalSwipe;
+
+        SidebarCard(Context context) {
+            super(context);
+            touchSlop = ViewConfiguration.get(context).getScaledTouchSlop();
+            setClickable(true);
+        }
+
+        @Override
+        public boolean onInterceptTouchEvent(MotionEvent event) {
+            switch (event.getActionMasked()) {
+                case MotionEvent.ACTION_DOWN:
+                    downX = event.getRawX();
+                    downY = event.getRawY();
+                    horizontalSwipe = false;
+                    break;
+                case MotionEvent.ACTION_MOVE:
+                    if (isHorizontalSwipe(event)) {
+                        getParent().requestDisallowInterceptTouchEvent(true);
+                        return true;
+                    }
+                case MotionEvent.ACTION_CANCEL:
+                case MotionEvent.ACTION_UP:
+                    horizontalSwipe = false;
+                    break;
+            }
+            return super.onInterceptTouchEvent(event);
+        }
+
+        @Override
+        public boolean onTouchEvent(MotionEvent event) {
+            switch (event.getActionMasked()) {
+                case MotionEvent.ACTION_MOVE:
+                    isHorizontalSwipe(event);
+                    return true;
+                case MotionEvent.ACTION_UP:
+                    float distance = event.getRawX() - downX;
+                    if (horizontalSwipe && Math.abs(distance) >= ui.dp(36)) {
+                        setExpanded(distance > 0, true);
+                    }
+                    horizontalSwipe = false;
+                    return true;
+                case MotionEvent.ACTION_CANCEL:
+                    horizontalSwipe = false;
+                    return true;
+                default:
+                    return true;
+            }
+        }
+
+        private boolean isHorizontalSwipe(MotionEvent event) {
+            float moveX = event.getRawX() - downX;
+            float moveY = event.getRawY() - downY;
+            if (!horizontalSwipe
+                    && Math.abs(moveX) > touchSlop
+                    && Math.abs(moveX) > Math.abs(moveY) * 1.25f) {
+                horizontalSwipe = true;
+            }
+            return horizontalSwipe;
+        }
+    }
+
+    private void addGap(int dp) {
+        Space gap = new Space(host);
+        content.addView(gap, new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ui.dp(dp)));
+    }
+}

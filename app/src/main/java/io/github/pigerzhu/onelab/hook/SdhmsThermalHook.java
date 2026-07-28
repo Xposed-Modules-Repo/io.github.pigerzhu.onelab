@@ -1,0 +1,439 @@
+package io.github.pigerzhu.onelab.hook;
+
+import android.content.ContentResolver;
+import android.content.Context;
+import android.content.Intent;
+import android.util.Log;
+
+import java.lang.reflect.Method;
+import java.util.Collections;
+import java.util.Map;
+import java.util.WeakHashMap;
+
+import io.github.pigerzhu.onelab.contract.SettingsKeys;
+
+import de.robv.android.xposed.XC_MethodHook;
+import de.robv.android.xposed.XposedBridge;
+import de.robv.android.xposed.XposedHelpers;
+import de.robv.android.xposed.callbacks.XC_LoadPackage;
+
+final class SdhmsThermalHook {
+    private static final String SDHMS_BINDER_SERVICE = "com.sec.android.sdhms.b";
+    private static final String SDHMS_SERVICE_IMPL = "I1.g";
+    private static final String SDHMS_THERMAL_GUARDIAN_CONTROLLER = "R1.X1";
+    private static final String SEM_MULTIWINDOW_MANAGER =
+            "com.samsung.android.app.SemMultiWindowManager";
+    private static final String SSRM_REQUESTER = "SSRM";
+    private static final Map<Object, SdhmsHookConfig.Snapshot> SYNCED_HIDDEN_CONTROLS =
+            Collections.synchronizedMap(new WeakHashMap<>());
+
+    private SdhmsThermalHook() {
+    }
+
+    static void install(XC_LoadPackage.LoadPackageParam lpparam) {
+        try {
+            Class<?> implClass = XposedHelpers.findClass(SDHMS_SERVICE_IMPL, lpparam.classLoader);
+            hookSdhmsPermissionGate(implClass);
+            hookSdhmsBinderService(lpparam);
+            XposedBridge.hookAllMethods(implClass, "w", new XC_MethodHook() {
+                @Override
+                protected void beforeHookedMethod(MethodHookParam param) {
+                    ContentResolver resolver = HookUtils.resolverFromAnyContext(param.thisObject);
+                    SdhmsHookConfig.Snapshot config = SdhmsHookConfig.current(resolver);
+                    if (resolver != null && config.thermalEnabled) {
+                        syncSdhmsHiddenThermalControls(
+                                param.thisObject, config, lpparam.classLoader);
+                        param.setResult(2);
+                    }
+                }
+            });
+            XposedBridge.hookAllMethods(implClass, "H", new XC_MethodHook() {
+                @Override
+                protected void beforeHookedMethod(MethodHookParam param) {
+                    ContentResolver resolver = HookUtils.resolverFromAnyContext(param.thisObject);
+                    SdhmsHookConfig.Snapshot config = SdhmsHookConfig.current(resolver);
+                    if (resolver == null || !config.thermalEnabled
+                            || param.args == null || param.args.length != 1) {
+                        return;
+                    }
+                    syncSdhmsHiddenThermalControls(
+                            param.thisObject, config, lpparam.classLoader);
+                    Boolean result = setCustomThermalDeltaDirect(
+                            param.thisObject,
+                            param.args[0],
+                            lpparam.classLoader
+                    );
+                    if (result != null) {
+                        param.setResult(result);
+                        Log.i(HookConstants.TAG, "Applied custom SDHMS thermal delta");
+                    }
+                }
+            });
+            XposedBridge.hookAllMethods(implClass, "I", new XC_MethodHook() {
+                @Override
+                protected void beforeHookedMethod(MethodHookParam param) {
+                    ContentResolver resolver = HookUtils.resolverFromAnyContext(param.thisObject);
+                    SdhmsHookConfig.Snapshot config = SdhmsHookConfig.current(resolver);
+                    if (resolver == null || !config.thermalEnabled
+                            || param.args == null || param.args.length != 2
+                            || !HookConstants.ONELAB_PACKAGE.equals(String.valueOf(param.args[0]))) {
+                        return;
+                    }
+                    syncSdhmsHiddenThermalControls(
+                            param.thisObject, config, lpparam.classLoader);
+                    Boolean result = setCustomThermalDeltaDirect(
+                            param.thisObject,
+                            param.args[1],
+                            lpparam.classLoader
+                    );
+                    if (result != null) {
+                        param.setResult(result);
+                        Log.i(HookConstants.TAG, "Allowed OneLab custom SDHMS thermal delta call");
+                    }
+                }
+            });
+            XposedBridge.hookAllMethods(implClass, "G", new XC_MethodHook() {
+                @Override
+                protected void beforeHookedMethod(MethodHookParam param) {
+                    ContentResolver resolver = HookUtils.resolverFromAnyContext(param.thisObject);
+                    SdhmsHookConfig.Snapshot config = SdhmsHookConfig.current(resolver);
+                    if (resolver == null || !config.thermalEnabled
+                            || param.args == null || param.args.length != 1) {
+                        return;
+                    }
+                    syncSdhmsHiddenThermalControls(
+                            param.thisObject, config, lpparam.classLoader);
+                    Boolean result = callThermalGuardianControllerBoolean(param.thisObject, "u", param.args[0]);
+                    if (result != null) {
+                        param.setResult(result);
+                        Log.i(HookConstants.TAG, "Routed SDHMS thermal control flag through ThermalGuardian controller");
+                    }
+                }
+            });
+            hookSdhmsThermalDeltaController(lpparam);
+            hookSdhmsSiopPerfCaps(lpparam);
+            hookSsrmMultiWindowLimit(lpparam);
+            Log.i(HookConstants.TAG, "Hooked SDHMS ThermalGuardian gates");
+        } catch (Throwable t) {
+            XposedBridge.log(HookConstants.TAG + ": SDHMS ThermalGuardian hook failed");
+            XposedBridge.log(t);
+        }
+    }
+
+    private static void hookSsrmMultiWindowLimit(XC_LoadPackage.LoadPackageParam lpparam) {
+        try {
+            Class<?> managerClass = XposedHelpers.findClass(
+                    SEM_MULTIWINDOW_MANAGER,
+                    lpparam.classLoader
+            );
+            XposedBridge.hookAllMethods(managerClass, "setMultiWindowEnabled", new XC_MethodHook() {
+                @Override
+                protected void beforeHookedMethod(MethodHookParam param) {
+                    if (param.args == null || param.args.length < 2
+                            || !SSRM_REQUESTER.equals(String.valueOf(param.args[0]))
+                            || !Boolean.FALSE.equals(param.args[1])) {
+                        return;
+                    }
+                    ContentResolver resolver = HookUtils.resolverFromAnyContext(param.thisObject);
+                    if (SdhmsHookConfig.current(resolver).ssrmMultiWindowLimitDisabled) {
+                        param.args[1] = true;
+                        Log.i(HookConstants.TAG,
+                                "Blocked SDHMS SSRM request to disable multi-window");
+                    }
+                }
+            });
+            Log.i(HookConstants.TAG, "Hooked SDHMS SSRM multi-window limit");
+        } catch (Throwable t) {
+            XposedBridge.log(HookConstants.TAG + ": SDHMS SSRM multi-window hook failed");
+            XposedBridge.log(t);
+        }
+    }
+
+    private static void hookSdhmsSiopPerfCaps(XC_LoadPackage.LoadPackageParam lpparam) {
+        hookSdhmsPerfCapClass(lpparam, "Q1.D0", "GPUFreqMax", true);
+        hookSdhmsPerfCapClass(lpparam, "Q1.b0", "CPUFreqMax", false);
+        hookSdhmsPerfCapClass(lpparam, "Q1.a0", "LittleCPUFreqMax", false);
+    }
+
+    private static void hookSdhmsPerfCapClass(
+            XC_LoadPackage.LoadPackageParam lpparam,
+            String className,
+            String label,
+            boolean gpu
+    ) {
+        try {
+            Class<?> capClass = XposedHelpers.findClass(className, lpparam.classLoader);
+            XposedBridge.hookAllMethods(capClass, "k", new XC_MethodHook() {
+                @Override
+                protected void beforeHookedMethod(MethodHookParam param) {
+                    if (param.args == null || param.args.length < 1 || !(param.args[0] instanceof Integer)) {
+                        return;
+                    }
+                    ContentResolver resolver = HookUtils.resolverFromAnyContext(param.thisObject);
+                    SdhmsHookConfig.Snapshot config = SdhmsHookConfig.current(resolver);
+                    if (resolver == null || !config.thermalEnabled
+                            || !config.perfCapBypassEnabled) {
+                        return;
+                    }
+                    int requested = (Integer) param.args[0];
+                    int replacement = rewriteSdhmsPerfCap(config, requested, gpu);
+                    if (replacement != requested) {
+                        param.args[0] = replacement;
+                        Log.i(HookConstants.TAG, "Rewrote SDHMS " + label + " cap: "
+                                + requested + " -> " + replacement);
+                    }
+                }
+            });
+            Log.i(HookConstants.TAG, "Hooked SDHMS " + label + " cap class " + className);
+        } catch (Throwable t) {
+            XposedBridge.log(HookConstants.TAG + ": SDHMS " + label + " cap hook failed: " + className);
+            XposedBridge.log(t);
+        }
+    }
+
+    private static void hookSdhmsBinderService(XC_LoadPackage.LoadPackageParam lpparam) throws Throwable {
+        Class<?> binderClass = XposedHelpers.findClass(SDHMS_BINDER_SERVICE, lpparam.classLoader);
+        XposedBridge.hookAllMethods(binderClass, "setThermalThrottlingDelta", new XC_MethodHook() {
+            @Override
+            protected void beforeHookedMethod(MethodHookParam param) {
+                if (param.args == null || param.args.length != 1) {
+                    return;
+                }
+                Object thermalService = sdhmsThermalServiceFromBinder(param.thisObject);
+                ContentResolver resolver = HookUtils.resolverFromAnyContext(thermalService);
+                SdhmsHookConfig.Snapshot config = SdhmsHookConfig.current(resolver);
+                if (resolver == null || !config.thermalEnabled) {
+                    return;
+                }
+                syncSdhmsHiddenThermalControls(
+                        thermalService, config, lpparam.classLoader);
+                Boolean result = setCustomThermalDeltaDirect(
+                        thermalService,
+                        param.args[0],
+                        lpparam.classLoader
+                );
+                if (result != null) {
+                    param.setResult(result);
+                    Log.i(HookConstants.TAG, "Applied custom SDHMS thermal delta via binder");
+                }
+            }
+        });
+        XposedBridge.hookAllMethods(binderClass, "setThermalThrottlingDeltaWithPackageName", new XC_MethodHook() {
+            @Override
+            protected void beforeHookedMethod(MethodHookParam param) {
+                if (param.args == null || param.args.length != 2
+                        || !HookConstants.ONELAB_PACKAGE.equals(String.valueOf(param.args[0]))) {
+                    return;
+                }
+                Object thermalService = sdhmsThermalServiceFromBinder(param.thisObject);
+                ContentResolver resolver = HookUtils.resolverFromAnyContext(thermalService);
+                SdhmsHookConfig.Snapshot config = SdhmsHookConfig.current(resolver);
+                if (resolver == null || !config.thermalEnabled) {
+                    return;
+                }
+                syncSdhmsHiddenThermalControls(
+                        thermalService, config, lpparam.classLoader);
+                Boolean result = setCustomThermalDeltaDirect(
+                        thermalService,
+                        param.args[1],
+                        lpparam.classLoader
+                );
+                if (result != null) {
+                    param.setResult(result);
+                    Log.i(HookConstants.TAG, "Applied custom SDHMS thermal delta with package via binder");
+                }
+            }
+        });
+        Log.i(HookConstants.TAG, "Hooked SDHMS binder thermal delta entry");
+    }
+
+    private static void hookSdhmsPermissionGate(Class<?> implClass) {
+        XposedBridge.hookAllMethods(implClass, "D", new XC_MethodHook() {
+            @Override
+            protected void beforeHookedMethod(MethodHookParam param) {
+                ContentResolver resolver = HookUtils.resolverFromAnyContext(param.thisObject);
+                if (resolver != null && SdhmsHookConfig.current(resolver).thermalEnabled
+                        && HookUtils.isCallingOneLabOrShell(HookUtils.firstContextFromObject(param.thisObject))) {
+                    param.setResult(Boolean.TRUE);
+                    Log.i(HookConstants.TAG, "Allowed OneLab to call SDHMS thermal service");
+                }
+            }
+        });
+    }
+
+    private static void hookSdhmsThermalDeltaController(XC_LoadPackage.LoadPackageParam lpparam) {
+        try {
+            Class<?> controllerClass = XposedHelpers.findClass(
+                    SDHMS_THERMAL_GUARDIAN_CONTROLLER,
+                    lpparam.classLoader
+            );
+            XposedBridge.hookAllMethods(controllerClass, "v", new XC_MethodHook() {
+                @Override
+                protected void beforeHookedMethod(MethodHookParam param) {
+                    if (param.args == null || param.args.length != 1 || !(param.args[0] instanceof Integer)) {
+                        return;
+                    }
+                    Object context = HookUtils.firstContextFromObject(param.thisObject);
+                    ContentResolver resolver = HookUtils.resolverFromContextObject(context);
+                    if (resolver == null || !SdhmsHookConfig.current(resolver).thermalEnabled
+                            || !HookUtils.isCallingOneLabOrShell(context)) {
+                        return;
+                    }
+                    Boolean result = setCustomThermalDeltaFromController(param.thisObject, context, param.args[0]);
+                    if (result != null) {
+                        param.setResult(result);
+                        Log.i(HookConstants.TAG, "Applied custom SDHMS thermal delta via controller");
+                    }
+                }
+            });
+            Log.i(HookConstants.TAG, "Hooked SDHMS ThermalGuardian controller");
+        } catch (Throwable t) {
+            XposedBridge.log(HookConstants.TAG + ": SDHMS ThermalGuardian controller hook failed");
+            XposedBridge.log(t);
+        }
+    }
+
+    private static int rewriteSdhmsPerfCap(
+            SdhmsHookConfig.Snapshot config,
+            int requested,
+            boolean gpu
+    ) {
+        if (requested <= 0) {
+            return requested;
+        }
+        if (!gpu) {
+            return config.cpuCapReleaseEnabled ? -1 : requested;
+        }
+        int floor = config.gpuMinCapMhz;
+        floor = nearestSupportedGpuFreqMhz(floor);
+        return requested < floor ? floor : requested;
+    }
+
+    private static int nearestSupportedGpuFreqMhz(int mhz) {
+        int best = SettingsKeys.DEFAULT_SDHMS_GPU_MIN_CAP_MHZ;
+        int bestDistance = Integer.MAX_VALUE;
+        for (int freq : SettingsKeys.SDHMS_GPU_FREQS_MHZ) {
+            int distance = Math.abs(freq - mhz);
+            if (distance < bestDistance || (distance == bestDistance && freq > best)) {
+                best = freq;
+                bestDistance = distance;
+            }
+        }
+        return best;
+    }
+
+    private static Object sdhmsThermalServiceFromBinder(Object binderService) {
+        Object registry = HookUtils.findFieldValue(binderService, "f4174c");
+        if (registry == null) {
+            return null;
+        }
+        try {
+            return XposedHelpers.callMethod(registry, "b", "Thermal");
+        } catch (Throwable t) {
+            XposedBridge.log(HookConstants.TAG + ": SDHMS Thermal service lookup failed");
+            XposedBridge.log(t);
+            return null;
+        }
+    }
+
+    private static Boolean callThermalGuardianControllerBoolean(Object service, String methodName, Object arg) {
+        Object controller = HookUtils.findFieldValue(service, "f1047W");
+        if (controller == null) {
+            return null;
+        }
+        try {
+            Object result = XposedHelpers.callMethod(controller, methodName, arg);
+            return result instanceof Boolean ? (Boolean) result : null;
+        } catch (Throwable t) {
+            XposedBridge.log(HookConstants.TAG + ": ThermalGuardian controller call failed: " + methodName);
+            XposedBridge.log(t);
+            return null;
+        }
+    }
+
+    private static Boolean setCustomThermalDeltaDirect(Object service, Object arg, ClassLoader classLoader) {
+        if (!(arg instanceof Integer)) {
+            return null;
+        }
+        int delta = Math.max(-5, Math.min(6, (Integer) arg));
+        Object context = HookUtils.firstContextFromObject(service);
+        if (context == null && service != null) {
+            context = HookUtils.invokeStaticNoArg(
+                    "android.app.ActivityThread",
+                    "currentApplication",
+                    service.getClass().getClassLoader()
+            );
+        }
+        try {
+            Class<?> temperatureClass = XposedHelpers.findClass(
+                    "com.sec.android.sdhms.thermal.siop.Temperature",
+                    classLoader
+            );
+            Object skin = temperatureClass.getMethod("valueOf", String.class).invoke(null, "SKIN");
+            XposedHelpers.callMethod(skin, "p", delta * -10);
+            if (context instanceof Context) {
+                sendThermalDeltaChanged((Context) context, delta);
+            }
+            return Boolean.TRUE;
+        } catch (Throwable t) {
+            XposedBridge.log(HookConstants.TAG + ": direct custom thermal delta failed");
+            XposedBridge.log(t);
+            return null;
+        }
+    }
+
+    private static Boolean setCustomThermalDeltaFromController(Object controller, Object context, Object arg) {
+        if (!(arg instanceof Integer) || controller == null || !(context instanceof Context)) {
+            return null;
+        }
+        int delta = Math.max(-5, Math.min(6, (Integer) arg));
+        try {
+            int current = (Integer) XposedHelpers.callMethod(controller, "n");
+            Method shift = controller.getClass().getDeclaredMethod("t", int.class);
+            shift.setAccessible(true);
+            shift.invoke(controller, current * -1);
+            shift.invoke(controller, delta);
+            sendThermalDeltaChanged((Context) context, delta);
+            return Boolean.TRUE;
+        } catch (Throwable t) {
+            XposedBridge.log(HookConstants.TAG + ": custom thermal delta failed");
+            XposedBridge.log(t);
+            return null;
+        }
+    }
+
+    private static void sendThermalDeltaChanged(Context context, int delta) {
+        Intent intent = new Intent("com.sec.android.sdhms.action.THERMAL_THROTTLING_DELTA_CHANGED");
+        intent.addFlags(16777216);
+        intent.putExtra("time", System.currentTimeMillis());
+        intent.putExtra("delta", delta);
+        context.sendBroadcast(intent);
+    }
+
+    private static void syncSdhmsHiddenThermalControls(
+            Object service,
+            SdhmsHookConfig.Snapshot config,
+            ClassLoader classLoader
+    ) {
+        if (service == null || SYNCED_HIDDEN_CONTROLS.get(service) == config) {
+            return;
+        }
+        Object context = HookUtils.firstContextFromObject(service);
+        if (context == null) {
+            return;
+        }
+        try {
+            Class<?> managerClass = XposedHelpers.findClass("Q1.j2", classLoader);
+            Method getInstance = managerClass.getDeclaredMethod("g", Context.class);
+            getInstance.setAccessible(true);
+            Object manager = getInstance.invoke(null, context);
+            XposedHelpers.callMethod(manager, "k", config.brightnessLimitDisabled);
+            XposedHelpers.callMethod(manager, "l", config.cpThermalMitigationDisabled);
+            SYNCED_HIDDEN_CONTROLS.put(service, config);
+            Log.i(HookConstants.TAG, "Synced SDHMS hidden thermal controls");
+        } catch (Throwable t) {
+            XposedBridge.log(HookConstants.TAG + ": SDHMS hidden thermal sync failed");
+            XposedBridge.log(t);
+        }
+    }
+}
