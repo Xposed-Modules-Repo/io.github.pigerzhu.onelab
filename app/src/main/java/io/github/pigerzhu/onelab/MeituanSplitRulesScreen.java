@@ -41,7 +41,7 @@ final class MeituanSplitRulesScreen {
         copy.addView(ui.text(
                 "美团分屏视图", 20, true, ui.colorOnSurface));
         copy.addView(ui.text(
-                "解锁应用自带的分栏能力",
+                "在“高级功能 - 实验室 - 应用程序分屏视图”列表中启用以生效",
                 14,
                 false,
                 ui.colorOnSurfaceVariant));

@@ -40,7 +40,7 @@ final class CtripSplitRulesScreen {
                 0, ViewGroup.LayoutParams.WRAP_CONTENT, 1));
         copy.addView(ui.text("携程应用分屏视图", 20, true, ui.colorOnSurface));
         copy.addView(ui.text(
-                "添加到系统的应用程序分屏视图列表",
+                "在“高级功能 - 实验室 - 应用程序分屏视图”列表中启用以生效",
                 14,
                 false,
                 ui.colorOnSurfaceVariant));

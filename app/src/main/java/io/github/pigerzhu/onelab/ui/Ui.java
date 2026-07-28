@@ -176,6 +176,15 @@ public final class Ui {
     }
 
     public View switchRow(String title, String subtitle, MaterialSwitch toggle) {
+        return switchRow(title, subtitle, toggle, 16);
+    }
+
+    public View switchRow(
+            String title,
+            String subtitle,
+            MaterialSwitch toggle,
+            int titleTextSize
+    ) {
         LinearLayout row = new LinearLayout(context);
         row.setGravity(Gravity.CENTER_VERTICAL);
         row.setOrientation(LinearLayout.HORIZONTAL);
@@ -185,7 +194,7 @@ public final class Ui {
         copy.setOrientation(LinearLayout.VERTICAL);
         row.addView(copy, new LinearLayout.LayoutParams(
                 0, ViewGroup.LayoutParams.WRAP_CONTENT, 1));
-        copy.addView(text(title, 16, true, colorOnSurface));
+        copy.addView(text(title, titleTextSize, true, colorOnSurface));
         if (subtitle != null && !subtitle.isEmpty()) {
             copy.addView(text(subtitle, 13, false, colorOnSurfaceVariant));
         }

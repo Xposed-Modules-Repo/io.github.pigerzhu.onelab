@@ -108,7 +108,8 @@ final class ThermalScreen {
         body.addView(ui.switchRow(
                 "启用 SDHMS 温控写入",
                 "总开关。开启后才能调整温控阈值和解除隐藏热限制。",
-                sdhmsThermalSwitch));
+                sdhmsThermalSwitch,
+                20));
         sdhmsThermalSwitch.setChecked(isSdhmsThermalEnabled());
         sdhmsThermalSwitch.setOnCheckedChangeListener((button, enabled) -> setSdhmsThermalEnabled(enabled));
         return card;

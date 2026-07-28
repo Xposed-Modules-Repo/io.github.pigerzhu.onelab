@@ -53,7 +53,7 @@ final class AspectRatioScreen {
         body.addView(copy, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1));
         copy.addView(ui.text("应用宽高比自定义", 20, true, ui.colorOnSurface));
 
-        TextView arrow = ui.text("›", 28, false, ui.colorOnSurfaceVariant);
+        TextView arrow = ui.text(">", 28, false, ui.colorOnSurfaceVariant);
         arrow.setGravity(Gravity.CENTER);
         body.addView(arrow, new LinearLayout.LayoutParams(ui.dp(32), ui.dp(40)));
         return card;

@@ -269,7 +269,7 @@ public class MainActivity extends Activity {
         markTopLevel(Ui.HOME_PERFORMANCE);
         nestedBackAction = null;
         LinearLayout root = beginSubPage(
-                "性能与温控", "处理速度、游戏热预算、隐藏温控和充电状态。",
+                "性能与温控", "处理速度和隐藏温控。",
                 animateBack ? -1 : topLevelEnterDirection());
         root.addView(thermalScreen.sdhmsThermalMasterCard());
         root.addView(processingSpeedScreen.card());
@@ -323,7 +323,7 @@ public class MainActivity extends Activity {
         markTopLevel(Ui.HOME_EXPERIMENTS);
         nestedBackAction = null;
         LinearLayout root = beginSubPage(
-                "实验功能", "保留探索性质的小功能",
+                "实验功能", "仅测试用途，不能保证有效",
                 animateBack ? -1 : topLevelEnterDirection());
         root.addView(gameHeatScreen.entryCard());
         root.addView(thermalScreen.entryCard());
