@@ -378,7 +378,7 @@ final class ThermalScreen {
         int clamped = nearestSupportedGpuFreqMhz(mhz);
         settings.setGlobal(KEY_SDHMS_GPU_MIN_CAP_MHZ, String.valueOf(clamped));
         updateSdhmsHiddenThermalStatus();
-        Toast.makeText(host, "GPU 最低上限已设为 " + clamped + "MHz", Toast.LENGTH_SHORT).show();
+        Toast.makeText(host, "GPU 上限已设为 " + clamped + "MHz", Toast.LENGTH_SHORT).show();
     }
 
     private void syncSdhmsHiddenThermalControls() {
@@ -447,7 +447,7 @@ final class ThermalScreen {
 
     private void updateSdhmsGpuMinCapValueLabel(int mhz) {
         if (sdhmsGpuMinCapValueLabel != null) {
-            sdhmsGpuMinCapValueLabel.setText("GPU 最低上限 " + mhz + "MHz");
+            sdhmsGpuMinCapValueLabel.setText("GPU 上限 " + mhz + "MHz");
         }
     }
 
