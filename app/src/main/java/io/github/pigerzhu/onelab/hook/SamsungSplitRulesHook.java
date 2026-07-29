@@ -19,10 +19,17 @@ import de.robv.android.xposed.callbacks.XC_LoadPackage;
 /** Bridges verified app-supplied fold rules into Samsung's split-activity repository. */
 final class SamsungSplitRulesHook {
     private static final String TAG = "OneLab/SamsungSplitRules";
-    private static final String CONTROLLER_CLASS =
+    private static final int ONE_UI_8_5 = 80500;
+    private static final String LEGACY_CONTROLLER_CLASS =
             "com.android.server.wm.MultiTaskingController";
+    private static final String ONE_UI_8_5_CONTROLLER_CLASS =
+            "com.android.server.wm.SplitActivityController";
+    private static final String LEGACY_CONTROLLER_FIELD = "mMultiTaskingController";
+    private static final String ONE_UI_8_5_CONTROLLER_FIELD = "mSplitActivityController";
     private static final String BINDER_CLASS =
             "com.android.server.wm.MultiTaskingBinder";
+    private static final String ATM_SERVICE_CLASS =
+            "com.android.server.wm.ActivityTaskManagerService";
     private static final String REPOSITORY_CLASS =
             "com.android.server.wm.SplitActivityInfoRepository";
     private static final String ACTIVITY_STARTER_CLASS =
@@ -32,12 +39,14 @@ final class SamsungSplitRulesHook {
 
     private static volatile Object activeRepository;
     private static volatile boolean observersRegistered;
+    private static volatile ControllerPath controllerPath;
 
     private SamsungSplitRulesHook() {
     }
 
     static void install(XC_LoadPackage.LoadPackageParam lpparam) {
         try {
+            controllerPath = selectControllerPath(lpparam.classLoader);
             Class<?> repositoryClass =
                     XposedHelpers.findClass(REPOSITORY_CLASS, lpparam.classLoader);
             XposedBridge.hookAllMethods(
@@ -55,7 +64,10 @@ final class SamsungSplitRulesHook {
                     });
 
             Class<?> controllerClass =
-                    XposedHelpers.findClass(CONTROLLER_CLASS, lpparam.classLoader);
+                    XposedHelpers.findClass(
+                            controllerPath.className,
+                            lpparam.classLoader
+                    );
             XposedBridge.hookAllMethods(
                     controllerClass,
                     "getSplitActivityInfo",
@@ -70,12 +82,17 @@ final class SamsungSplitRulesHook {
                             }
                         }
                     });
-            XposedBridge.hookAllConstructors(controllerClass, new XC_MethodHook() {
-                @Override
-                protected void afterHookedMethod(MethodHookParam param) {
-                    initialize(param.thisObject);
-                }
-            });
+            Class<?> atmServiceClass =
+                    XposedHelpers.findClass(ATM_SERVICE_CLASS, lpparam.classLoader);
+            XposedBridge.hookAllMethods(
+                    atmServiceClass,
+                    "onSystemReady",
+                    new XC_MethodHook() {
+                        @Override
+                        protected void afterHookedMethod(MethodHookParam param) {
+                            initializeFromAtm(param.thisObject);
+                        }
+                    });
 
             Class<?> activityStarterClass =
                     XposedHelpers.findClass(ACTIVITY_STARTER_CLASS, lpparam.classLoader);
@@ -106,7 +123,7 @@ final class SamsungSplitRulesHook {
                             initializeFromBinder(param.thisObject);
                         }
                     });
-            Log.i(TAG, "Installed Samsung split-rule bridge");
+            XposedBridge.log(TAG + ": installed " + controllerPath.label);
         } catch (Throwable throwable) {
             XposedBridge.log(TAG + ": installation failed");
             XposedBridge.log(throwable);
@@ -115,7 +132,14 @@ final class SamsungSplitRulesHook {
 
     private static void initializeFromBinder(Object binder) {
         Object atm = HookUtils.findFieldValue(binder, "mAtm");
-        Object controller = HookUtils.findFieldValue(atm, "mMultiTaskingController");
+        initializeFromAtm(atm);
+    }
+
+    private static void initializeFromAtm(Object atm) {
+        ControllerPath path = controllerPath;
+        Object controller = path == null
+                ? null
+                : HookUtils.findFieldValue(atm, path.fieldName);
         if (controller != null) initialize(controller);
     }
 
@@ -124,8 +148,10 @@ final class SamsungSplitRulesHook {
             Object repository = HookUtils.findFieldValue(
                     controller, "mSplitActivityInfoRepository");
             Object atm = HookUtils.findFieldValue(controller, "mAtm");
-            Object context = HookUtils.findFieldValue(atm, "mContext");
-            ContentResolver resolver = HookUtils.resolverFromContextObject(context);
+            if (atm == null) {
+                atm = HookUtils.findFieldValue(controller, "mAtmService");
+            }
+            ContentResolver resolver = HookUtils.resolverFromAnyContext(atm);
             if (repository == null || resolver == null) {
                 Log.w(TAG, "Samsung split repository is unavailable");
                 return;
@@ -238,6 +264,67 @@ final class SamsungSplitRulesHook {
     private static Map<?, ?> repositoryMap(Object repository) {
         Object value = HookUtils.findFieldValue(repository, "mRepository");
         return value instanceof Map ? (Map<?, ?>) value : null;
+    }
+
+    private static ControllerPath selectControllerPath(ClassLoader classLoader) {
+        int oneUiVersion = oneUiVersion(classLoader);
+        ControllerPath preferred = oneUiVersion >= ONE_UI_8_5
+                ? ControllerPath.ONE_UI_8_5
+                : ControllerPath.LEGACY;
+        if (XposedHelpers.findClassIfExists(preferred.className, classLoader) != null) {
+            return preferred;
+        }
+        ControllerPath fallback = preferred == ControllerPath.ONE_UI_8_5
+                ? ControllerPath.LEGACY
+                : ControllerPath.ONE_UI_8_5;
+        if (XposedHelpers.findClassIfExists(fallback.className, classLoader) != null) {
+            Log.w(TAG, "One UI version/controller mismatch; using "
+                    + fallback.label);
+            return fallback;
+        }
+        throw new IllegalStateException("Samsung split-activity controller unavailable");
+    }
+
+    private static int oneUiVersion(ClassLoader classLoader) {
+        try {
+            Class<?> systemProperties = XposedHelpers.findClass(
+                    "android.os.SystemProperties",
+                    classLoader
+            );
+            Object value = XposedHelpers.callStaticMethod(
+                    systemProperties,
+                    "getInt",
+                    "ro.build.version.oneui",
+                    0
+            );
+            return value instanceof Integer ? (Integer) value : 0;
+        } catch (Throwable throwable) {
+            Log.w(TAG, "Unable to read One UI version; detecting controller class");
+            return 0;
+        }
+    }
+
+    private static final class ControllerPath {
+        static final ControllerPath LEGACY = new ControllerPath(
+                "One UI 8 legacy controller",
+                LEGACY_CONTROLLER_CLASS,
+                LEGACY_CONTROLLER_FIELD
+        );
+        static final ControllerPath ONE_UI_8_5 = new ControllerPath(
+                "One UI 8.5 controller",
+                ONE_UI_8_5_CONTROLLER_CLASS,
+                ONE_UI_8_5_CONTROLLER_FIELD
+        );
+
+        final String label;
+        final String className;
+        final String fieldName;
+
+        ControllerPath(String label, String className, String fieldName) {
+            this.label = label;
+            this.className = className;
+            this.fieldName = fieldName;
+        }
     }
 
 }
