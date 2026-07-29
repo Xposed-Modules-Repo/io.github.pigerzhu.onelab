@@ -315,8 +315,8 @@ public class MainActivity extends Activity {
                 "性能与温控", "处理速度和隐藏温控。",
                 animateBack ? -1 : topLevelEnterDirection());
         root.addView(thermalScreen.sdhmsThermalMasterCard());
-        root.addView(processingSpeedScreen.card());
         root.addView(thermalScreen.sdhmsHiddenThermalCard());
+        root.addView(processingSpeedScreen.card());
     }
 
     private void showSystemUiPage() {
