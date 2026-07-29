@@ -22,21 +22,33 @@ final class PredictiveBackController {
     private final Supplier<View> currentView;
     private final Supplier<View> previewView;
     private final BooleanSupplier transitionRunning;
+    private final Runnable prepareBackGesture;
     private final Runnable backAction;
     private final OnBackInvokedCallback callback;
 
     private View gestureView;
     private View gesturePreview;
+    private float gestureStartTranslation;
+    private float gestureStartScale = 1f;
+    private float previewStartTranslation;
+    private float previewStartAlpha = 0.92f;
 
     static PredictiveBackController register(
             Activity activity,
             Supplier<View> currentView,
             Supplier<View> previewView,
             BooleanSupplier transitionRunning,
+            Runnable prepareBackGesture,
             Runnable backAction
     ) {
         return new PredictiveBackController(
-                activity, currentView, previewView, transitionRunning, backAction);
+                activity,
+                currentView,
+                previewView,
+                transitionRunning,
+                prepareBackGesture,
+                backAction
+        );
     }
 
     private PredictiveBackController(
@@ -44,12 +56,14 @@ final class PredictiveBackController {
             Supplier<View> currentView,
             Supplier<View> previewView,
             BooleanSupplier transitionRunning,
+            Runnable prepareBackGesture,
             Runnable backAction
     ) {
         this.activity = activity;
         this.currentView = currentView;
         this.previewView = previewView;
         this.transitionRunning = transitionRunning;
+        this.prepareBackGesture = prepareBackGesture;
         this.backAction = backAction;
         callback = Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE
                 ? animationCallback()
@@ -66,15 +80,20 @@ final class PredictiveBackController {
         return new OnBackAnimationCallback() {
             @Override
             public void onBackStarted(BackEvent backEvent) {
+                prepareBackGesture.run();
                 if (transitionRunning.getAsBoolean()) return;
                 gestureView = currentView.get();
                 gesturePreview = previewView.get();
                 if (gestureView != null) {
                     gestureView.animate().cancel();
+                    gestureStartTranslation = gestureView.getTranslationX();
+                    gestureStartScale = gestureView.getScaleX();
                 }
                 if (gesturePreview != null) {
                     gesturePreview.animate().cancel();
                     gesturePreview.setVisibility(View.VISIBLE);
+                    previewStartTranslation = gesturePreview.getTranslationX();
+                    previewStartAlpha = gesturePreview.getAlpha();
                 }
             }
 
@@ -103,16 +122,20 @@ final class PredictiveBackController {
         float clamped = Math.max(0f, Math.min(1f, progress));
         float eased = 1f - (float) Math.pow(1f - clamped, 3);
         float width = view.getWidth();
-        float maxTranslation = Math.min(width * 0.28f, dp(220));
-        view.setTranslationX(maxTranslation * eased);
-        float scale = 1f - (0.035f * eased);
+        float normalTarget = Math.min(width * 0.28f, dp(220));
+        float targetTranslation = gestureStartTranslation > normalTarget
+                ? width
+                : normalTarget;
+        view.setTranslationX(lerp(
+                gestureStartTranslation, targetTranslation, eased));
+        float scale = lerp(gestureStartScale, 0.965f, eased);
         view.setScaleX(scale);
         view.setScaleY(scale);
 
         View preview = gesturePreview;
         if (preview != null && preview == previewView.get()) {
-            preview.setTranslationX((-width * 0.16f) * (1f - eased));
-            preview.setAlpha(0.92f + (0.08f * eased));
+            preview.setTranslationX(lerp(previewStartTranslation, 0f, eased));
+            preview.setAlpha(lerp(previewStartAlpha, 1f, eased));
         }
     }
 
@@ -174,5 +197,9 @@ final class PredictiveBackController {
 
     private int dp(int value) {
         return Math.round(value * activity.getResources().getDisplayMetrics().density);
+    }
+
+    private float lerp(float start, float end, float progress) {
+        return start + ((end - start) * progress);
     }
 }

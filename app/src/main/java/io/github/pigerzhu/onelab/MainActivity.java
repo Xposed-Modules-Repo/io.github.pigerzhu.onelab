@@ -25,6 +25,7 @@ import com.google.android.material.card.MaterialCardView;
 import com.google.android.material.color.DynamicColors;
 
 import java.util.ArrayDeque;
+import java.util.ArrayList;
 
 import io.github.pigerzhu.onelab.system.SettingsStore;
 import io.github.pigerzhu.onelab.ui.AppTheme;
@@ -69,6 +70,7 @@ public class MainActivity extends Activity {
     private FrameLayout pageHost;
     private View currentPageView;
     private final ArrayDeque<View> backPageStack = new ArrayDeque<>();
+    private final ArrayList<SpringAnimation> runningPageSprings = new ArrayList<>();
     private boolean largeScreenLayout;
     private int selectedTopLevel = -1;
     private FoldSidebar foldSidebar;
@@ -112,6 +114,7 @@ public class MainActivity extends Activity {
                 () -> currentPageView,
                 () -> predictiveParentPreviewEnabled ? backPageStack.peek() : null,
                 () -> pageTransitionRunning,
+                this::interruptPageTransitionForBack,
                 this::handleBackNavigation
         );
         largeScreenLayout = isLargeScreen(getResources().getConfiguration());
@@ -560,11 +563,14 @@ public class MainActivity extends Activity {
     private void animateDetailOut(View previousPage, View nextPage) {
         pageTransitionRunning = true;
         int width = getResources().getDisplayMetrics().widthPixels;
+        boolean retainedPreview = nextPage.getParent() == pageHost;
         nextPage.setVisibility(View.VISIBLE);
-        nextPage.setTranslationX(-width * 0.16f);
         nextPage.setScaleX(1f);
         nextPage.setScaleY(1f);
-        nextPage.setAlpha(0.92f);
+        if (!retainedPreview) {
+            nextPage.setTranslationX(-width * 0.16f);
+            nextPage.setAlpha(0.92f);
+        }
         previousPage.bringToFront();
 
         nextPage.animate()
@@ -577,6 +583,7 @@ public class MainActivity extends Activity {
         springTranslationX(
                 previousPage, width, EXIT_SPRING_STIFFNESS, EXIT_SPRING_DAMPING,
                 (animation, canceled, value, velocity) -> {
+                    if (canceled) return;
                     pageHost.removeView(previousPage);
                     pageTransitionRunning = false;
                 });
@@ -594,11 +601,28 @@ public class MainActivity extends Activity {
                 .setDampingRatio(damping);
         SpringAnimation animation = new SpringAnimation(
                 view, DynamicAnimation.TRANSLATION_X);
+        runningPageSprings.add(animation);
         animation.setSpring(force);
         animation.setMinimumVisibleChange(0.5f);
+        animation.addEndListener((endedAnimation, canceled, value, velocity) ->
+                runningPageSprings.remove(endedAnimation));
         if (endListener != null) {
             animation.addEndListener(endListener);
         }
         animation.start();
+    }
+
+    private void interruptPageTransitionForBack() {
+        if (!pageTransitionRunning) return;
+        for (int i = 0; i < pageHost.getChildCount(); i++) {
+            pageHost.getChildAt(i).animate().cancel();
+        }
+        SpringAnimation[] animations =
+                runningPageSprings.toArray(new SpringAnimation[0]);
+        for (SpringAnimation animation : animations) {
+            animation.cancel();
+        }
+        runningPageSprings.clear();
+        pageTransitionRunning = false;
     }
 }
