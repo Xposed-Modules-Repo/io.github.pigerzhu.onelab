@@ -1,4 +1,7 @@
-package io.github.pigerzhu.onelab.hook;
+package io.github.pigerzhu.onelab.hook.samsung;
+
+import io.github.pigerzhu.onelab.hook.core.HookConstants;
+import io.github.pigerzhu.onelab.hook.core.HookUtils;
 
 import android.content.ContentResolver;
 import android.database.ContentObserver;
@@ -17,7 +20,7 @@ import de.robv.android.xposed.XposedHelpers;
 import de.robv.android.xposed.callbacks.XC_LoadPackage;
 
 /** Bridges verified app-supplied fold rules into Samsung's split-activity repository. */
-final class SamsungSplitRulesHook {
+public final class SamsungSplitRulesHook {
     private static final String TAG = "OneLab/SamsungSplitRules";
     private static final int ONE_UI_8_5 = 80500;
     private static final String LEGACY_CONTROLLER_CLASS =
@@ -44,7 +47,7 @@ final class SamsungSplitRulesHook {
     private SamsungSplitRulesHook() {
     }
 
-    static void install(XC_LoadPackage.LoadPackageParam lpparam) {
+    public static void install(XC_LoadPackage.LoadPackageParam lpparam) {
         try {
             controllerPath = selectControllerPath(lpparam.classLoader);
             Class<?> repositoryClass =

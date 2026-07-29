@@ -1,9 +1,11 @@
-package io.github.pigerzhu.onelab.hook;
+package io.github.pigerzhu.onelab.hook.applications;
+
+import io.github.pigerzhu.onelab.hook.core.HookConstants;
+import io.github.pigerzhu.onelab.hook.core.HookUtils;
 
 import android.app.Application;
 import android.content.ContentResolver;
 import android.content.Context;
-import android.content.res.Configuration;
 import android.database.ContentObserver;
 import android.os.Handler;
 import android.os.Looper;
@@ -20,21 +22,22 @@ import de.robv.android.xposed.XposedBridge;
 import de.robv.android.xposed.callbacks.XC_LoadPackage;
 import io.github.pigerzhu.onelab.contract.SettingsKeys;
 
-/** Restores Xiaomi Shop's native Activity Embedding path on expanded Fold screens. */
-final class XiaomiShopFoldHook {
-    private static final String TAG = "OneLab/XiaomiShopFold";
-    private static final String DEVICE_UTIL = "com.xiaomi.shop2.util.DeviceUtil";
-    private static final int LARGE_SCREEN_DP = 600;
+/** Lets Bilibili evaluate its own Fold large-screen gate without forcing any layout policy. */
+public final class BiliFoldGateHook {
+    private static final String TAG = "OneLab/BiliFoldGate";
+    private static final String KCONFIG_CLASS = "kntr.base.config.KConfig";
+    private static final String CONFIG_METHOD = "config";
+    private static final String LARGE_SCREEN_KEY = "dd_screen_adjust_xiaomi_864";
 
     private static final Object INSTALL_LOCK = new Object();
     private static final Set<ClassLoader> INSTALLED_LOADERS =
             Collections.newSetFromMap(new IdentityHashMap<>());
-    private static final AtomicBoolean LOGGED_ACTIVE = new AtomicBoolean();
+    private static final AtomicBoolean LOGGED_REWRITE = new AtomicBoolean();
 
-    private XiaomiShopFoldHook() {
+    private BiliFoldGateHook() {
     }
 
-    static void install(XC_LoadPackage.LoadPackageParam lpparam) {
+    public static void install(XC_LoadPackage.LoadPackageParam lpparam) {
         XposedBridge.hookAllMethods(Application.class, "attach", new XC_MethodHook() {
             @Override
             protected void afterHookedMethod(MethodHookParam param) {
@@ -57,38 +60,34 @@ final class XiaomiShopFoldHook {
         try {
             AtomicBoolean enabled = new AtomicBoolean(isEnabled(context));
             observeEnabledSetting(context, enabled);
-
-            Class<?> deviceUtil = classLoader.loadClass(DEVICE_UTIL);
-            XposedBridge.hookAllMethods(deviceUtil, "isPadOrFold", new XC_MethodHook() {
+            Class<?> configClass = classLoader.loadClass(KCONFIG_CLASS);
+            XposedBridge.hookAllMethods(configClass, CONFIG_METHOD, new XC_MethodHook() {
                 @Override
                 protected void afterHookedMethod(MethodHookParam param) {
-                    if (!enabled.get() || !isExpanded(context)) return;
-                    param.setResult(true);
-                    if (LOGGED_ACTIVE.compareAndSet(false, true)) {
-                        Log.i(TAG, "Native expanded-screen layout enabled");
+                    if (!enabled.get() || param.args == null || param.args.length < 1
+                            || !LARGE_SCREEN_KEY.equals(param.args[0])) {
+                        return;
+                    }
+                    param.setResult("large");
+                    if (LOGGED_REWRITE.compareAndSet(false, true)) {
+                        Log.i(TAG, LARGE_SCREEN_KEY + " off -> large");
                     }
                 }
             });
-            Log.i(TAG, "Installed guarded Xiaomi Shop Fold hook");
-        } catch (Throwable throwable) {
+            Log.i(TAG, "Hooked KConfig.config for " + LARGE_SCREEN_KEY);
+        } catch (Throwable t) {
             synchronized (INSTALL_LOCK) {
                 INSTALLED_LOADERS.remove(classLoader);
             }
-            XposedBridge.log(TAG + ": installation failed");
-            XposedBridge.log(throwable);
+            XposedBridge.log(TAG + ": KConfig hook installation failed");
+            XposedBridge.log(t);
         }
-    }
-
-    private static boolean isExpanded(Context context) {
-        Configuration configuration = context.getResources().getConfiguration();
-        return configuration.screenWidthDp >= LARGE_SCREEN_DP
-                && configuration.smallestScreenWidthDp >= LARGE_SCREEN_DP;
     }
 
     private static void observeEnabledSetting(Context context, AtomicBoolean enabled) {
         ContentResolver resolver = context.getContentResolver();
         resolver.registerContentObserver(
-                Settings.Global.getUriFor(SettingsKeys.KEY_ENABLE_XIAOMI_SHOP_FOLD),
+                Settings.Global.getUriFor(SettingsKeys.KEY_ENABLE_BILI_FOLD_GATE),
                 false,
                 new ContentObserver(new Handler(Looper.getMainLooper())) {
                     @Override
@@ -100,8 +99,6 @@ final class XiaomiShopFoldHook {
 
     private static boolean isEnabled(Context context) {
         return HookUtils.globalEnabled(
-                context.getContentResolver(),
-                SettingsKeys.KEY_ENABLE_XIAOMI_SHOP_FOLD,
-                0);
+                context.getContentResolver(), SettingsKeys.KEY_ENABLE_BILI_FOLD_GATE, 0);
     }
 }

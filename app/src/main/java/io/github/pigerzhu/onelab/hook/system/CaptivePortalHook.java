@@ -1,4 +1,7 @@
-package io.github.pigerzhu.onelab.hook;
+package io.github.pigerzhu.onelab.hook.system;
+
+import io.github.pigerzhu.onelab.hook.core.HookConstants;
+import io.github.pigerzhu.onelab.hook.core.HookUtils;
 
 import android.content.ContentResolver;
 import android.net.NetworkCapabilities;
@@ -19,7 +22,7 @@ import de.robv.android.xposed.XposedBridge;
 import de.robv.android.xposed.XposedHelpers;
 import de.robv.android.xposed.callbacks.XC_LoadPackage;
 
-final class CaptivePortalHook {
+public final class CaptivePortalHook {
     private static final String CAPTIVE_PORTAL_ACTIVITY =
             "com.android.captiveportallogin.CaptivePortalLoginActivity";
     private static final Set<Object> delayedActivities =
@@ -28,7 +31,7 @@ final class CaptivePortalHook {
     private CaptivePortalHook() {
     }
 
-    static void install(XC_LoadPackage.LoadPackageParam lpparam) {
+    public static void install(XC_LoadPackage.LoadPackageParam lpparam) {
         try {
             Class<?> activityClass = XposedHelpers.findClass(CAPTIVE_PORTAL_ACTIVITY, lpparam.classLoader);
             XposedBridge.hookAllMethods(activityClass, "handleCapabilitiesChanged", new XC_MethodHook() {

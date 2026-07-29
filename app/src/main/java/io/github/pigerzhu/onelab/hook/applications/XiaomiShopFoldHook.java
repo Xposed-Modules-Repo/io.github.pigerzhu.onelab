@@ -1,6 +1,8 @@
-package io.github.pigerzhu.onelab.hook;
+package io.github.pigerzhu.onelab.hook.applications;
 
-import android.app.Activity;
+import io.github.pigerzhu.onelab.hook.core.HookConstants;
+import io.github.pigerzhu.onelab.hook.core.HookUtils;
+
 import android.app.Application;
 import android.content.ContentResolver;
 import android.content.Context;
@@ -21,14 +23,10 @@ import de.robv.android.xposed.XposedBridge;
 import de.robv.android.xposed.callbacks.XC_LoadPackage;
 import io.github.pigerzhu.onelab.contract.SettingsKeys;
 
-/**
- * Restores QQ's native Fold classification when HMS Push presents a Huawei environment.
- */
-final class QqFoldLayoutHook {
-    private static final String TAG = "OneLab/QqFoldLayout";
-    private static final String PAD_UTIL = "com.tencent.common.config.pad.PadUtil";
-    private static final String DEVICE_TYPE = "com.tencent.common.config.pad.DeviceType";
-    private static final String PAD_LAYOUT_UTIL = "com.tencent.mobileqq.pad.c";
+/** Restores Xiaomi Shop's native Activity Embedding path on expanded Fold screens. */
+public final class XiaomiShopFoldHook {
+    private static final String TAG = "OneLab/XiaomiShopFold";
+    private static final String DEVICE_UTIL = "com.xiaomi.shop2.util.DeviceUtil";
     private static final int LARGE_SCREEN_DP = 600;
 
     private static final Object INSTALL_LOCK = new Object();
@@ -36,10 +34,10 @@ final class QqFoldLayoutHook {
             Collections.newSetFromMap(new IdentityHashMap<>());
     private static final AtomicBoolean LOGGED_ACTIVE = new AtomicBoolean();
 
-    private QqFoldLayoutHook() {
+    private XiaomiShopFoldHook() {
     }
 
-    static void install(XC_LoadPackage.LoadPackageParam lpparam) {
+    public static void install(XC_LoadPackage.LoadPackageParam lpparam) {
         XposedBridge.hookAllMethods(Application.class, "attach", new XC_MethodHook() {
             @Override
             protected void afterHookedMethod(MethodHookParam param) {
@@ -63,11 +61,18 @@ final class QqFoldLayoutHook {
             AtomicBoolean enabled = new AtomicBoolean(isEnabled(context));
             observeEnabledSetting(context, enabled);
 
-            Class<?> deviceType = classLoader.loadClass(DEVICE_TYPE);
-            Object fold = deviceType.getField("FOLD").get(null);
-            hookDeviceType(classLoader, enabled, fold);
-            hookExpandedState(classLoader, enabled);
-            Log.i(TAG, "Installed guarded QQ Fold hooks");
+            Class<?> deviceUtil = classLoader.loadClass(DEVICE_UTIL);
+            XposedBridge.hookAllMethods(deviceUtil, "isPadOrFold", new XC_MethodHook() {
+                @Override
+                protected void afterHookedMethod(MethodHookParam param) {
+                    if (!enabled.get() || !isExpanded(context)) return;
+                    param.setResult(true);
+                    if (LOGGED_ACTIVE.compareAndSet(false, true)) {
+                        Log.i(TAG, "Native expanded-screen layout enabled");
+                    }
+                }
+            });
+            Log.i(TAG, "Installed guarded Xiaomi Shop Fold hook");
         } catch (Throwable throwable) {
             synchronized (INSTALL_LOCK) {
                 INSTALLED_LOADERS.remove(classLoader);
@@ -77,39 +82,8 @@ final class QqFoldLayoutHook {
         }
     }
 
-    private static void hookDeviceType(
-            ClassLoader classLoader, AtomicBoolean enabled, Object fold) throws Throwable {
-        Class<?> padUtil = classLoader.loadClass(PAD_UTIL);
-        XposedBridge.hookAllMethods(padUtil, "a", new XC_MethodHook() {
-            @Override
-            protected void afterHookedMethod(MethodHookParam param) {
-                if (!enabled.get() || param.args == null || param.args.length != 1
-                        || !(param.args[0] == null || param.args[0] instanceof Context)) {
-                    return;
-                }
-                param.setResult(fold);
-                logActive();
-            }
-        });
-    }
-
-    private static void hookExpandedState(
-            ClassLoader classLoader, AtomicBoolean enabled) throws Throwable {
-        Class<?> padLayoutUtil = classLoader.loadClass(PAD_LAYOUT_UTIL);
-        XposedBridge.hookAllMethods(padLayoutUtil, "b", new XC_MethodHook() {
-            @Override
-            protected void afterHookedMethod(MethodHookParam param) {
-                if (!enabled.get() || param.args == null || param.args.length != 1
-                        || !(param.args[0] instanceof Activity)) {
-                    return;
-                }
-                param.setResult(isExpanded((Activity) param.args[0]));
-            }
-        });
-    }
-
-    private static boolean isExpanded(Activity activity) {
-        Configuration configuration = activity.getResources().getConfiguration();
+    private static boolean isExpanded(Context context) {
+        Configuration configuration = context.getResources().getConfiguration();
         return configuration.screenWidthDp >= LARGE_SCREEN_DP
                 && configuration.smallestScreenWidthDp >= LARGE_SCREEN_DP;
     }
@@ -117,7 +91,7 @@ final class QqFoldLayoutHook {
     private static void observeEnabledSetting(Context context, AtomicBoolean enabled) {
         ContentResolver resolver = context.getContentResolver();
         resolver.registerContentObserver(
-                Settings.Global.getUriFor(SettingsKeys.KEY_ENABLE_QQ_FOLD_LAYOUT),
+                Settings.Global.getUriFor(SettingsKeys.KEY_ENABLE_XIAOMI_SHOP_FOLD),
                 false,
                 new ContentObserver(new Handler(Looper.getMainLooper())) {
                     @Override
@@ -129,12 +103,8 @@ final class QqFoldLayoutHook {
 
     private static boolean isEnabled(Context context) {
         return HookUtils.globalEnabled(
-                context.getContentResolver(), SettingsKeys.KEY_ENABLE_QQ_FOLD_LAYOUT, 0);
-    }
-
-    private static void logActive() {
-        if (LOGGED_ACTIVE.compareAndSet(false, true)) {
-            Log.i(TAG, "QQ native Fold classification enabled");
-        }
+                context.getContentResolver(),
+                SettingsKeys.KEY_ENABLE_XIAOMI_SHOP_FOLD,
+                0);
     }
 }

@@ -1,4 +1,7 @@
-package io.github.pigerzhu.onelab.hook;
+package io.github.pigerzhu.onelab.hook.system;
+
+import io.github.pigerzhu.onelab.hook.core.HookConstants;
+import io.github.pigerzhu.onelab.hook.core.HookUtils;
 
 import android.content.ContentResolver;
 import android.database.ContentObserver;

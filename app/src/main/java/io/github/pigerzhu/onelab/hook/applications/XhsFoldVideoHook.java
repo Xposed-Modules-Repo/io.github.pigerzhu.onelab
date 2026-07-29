@@ -1,4 +1,7 @@
-package io.github.pigerzhu.onelab.hook;
+package io.github.pigerzhu.onelab.hook.applications;
+
+import io.github.pigerzhu.onelab.hook.core.HookConstants;
+import io.github.pigerzhu.onelab.hook.core.HookUtils;
 
 import android.app.Application;
 import android.content.ContentResolver;
@@ -23,7 +26,7 @@ import io.github.pigerzhu.onelab.contract.SettingsKeys;
 /**
  * Enables XHS's existing Pad video-detail route inside the XHS process.
  */
-final class XhsFoldVideoHook {
+public final class XhsFoldVideoHook {
     private static final String TAG = "OneLab/XhsFoldVideo";
 
     private static final String AB_TEST_HELPER =
@@ -61,7 +64,7 @@ final class XhsFoldVideoHook {
     private XhsFoldVideoHook() {
     }
 
-    static void install(XC_LoadPackage.LoadPackageParam lpparam) {
+    public static void install(XC_LoadPackage.LoadPackageParam lpparam) {
         XposedBridge.hookAllMethods(Application.class, "attach", new XC_MethodHook() {
             @Override
             protected void afterHookedMethod(MethodHookParam param) {

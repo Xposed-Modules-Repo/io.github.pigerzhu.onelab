@@ -1,4 +1,7 @@
-package io.github.pigerzhu.onelab.hook;
+package io.github.pigerzhu.onelab.hook.applications;
+
+import io.github.pigerzhu.onelab.hook.core.HookConstants;
+import io.github.pigerzhu.onelab.hook.core.HookUtils;
 
 import android.app.Application;
 import android.content.ComponentName;
@@ -27,7 +30,7 @@ import io.github.pigerzhu.onelab.contract.SettingsKeys;
  * Keeps Tongcheng's native Activity Embedding rules while removing broad
  * always-expand exceptions from normal content pages.
  */
-final class TongchengSplitRulesHook {
+public final class TongchengSplitRulesHook {
     private static final String TAG = "OneLab/TongchengSplit";
     private static final String SPLIT_CONTROLLER =
             "androidx.window.embedding.SplitController";
@@ -43,7 +46,7 @@ final class TongchengSplitRulesHook {
     private TongchengSplitRulesHook() {
     }
 
-    static void install(XC_LoadPackage.LoadPackageParam lpparam) {
+    public static void install(XC_LoadPackage.LoadPackageParam lpparam) {
         XposedBridge.hookAllMethods(Application.class, "attach", new XC_MethodHook() {
             @Override
             protected void afterHookedMethod(MethodHookParam param) {

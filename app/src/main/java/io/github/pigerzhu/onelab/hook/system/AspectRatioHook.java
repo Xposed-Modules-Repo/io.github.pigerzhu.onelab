@@ -1,4 +1,7 @@
-package io.github.pigerzhu.onelab.hook;
+package io.github.pigerzhu.onelab.hook.system;
+
+import io.github.pigerzhu.onelab.hook.core.HookConstants;
+import io.github.pigerzhu.onelab.hook.core.HookUtils;
 
 import android.content.ContentResolver;
 import android.database.ContentObserver;
@@ -38,7 +41,7 @@ import de.robv.android.xposed.callbacks.XC_LoadPackage;
  * The cover display on this fold is a separate display id, so inner-only overrides are skipped
  * there.
  */
-final class AspectRatioHook {
+public final class AspectRatioHook {
     private static final String POLICY_CLASS = "com.android.server.wm.AppCompatAspectRatioPolicy";
     private static final int INNER_DISPLAY_ID = 0;
     private static final Object LOCK = new Object();
@@ -51,7 +54,7 @@ final class AspectRatioHook {
     private AspectRatioHook() {
     }
 
-    static void install(XC_LoadPackage.LoadPackageParam lpparam) {
+    public static void install(XC_LoadPackage.LoadPackageParam lpparam) {
         try {
             Class<?> policyClass = XposedHelpers.findClass(POLICY_CLASS, lpparam.classLoader);
             XposedBridge.hookAllMethods(policyClass, "getMinAspectRatio", new XC_MethodHook() {

@@ -1,4 +1,7 @@
-package io.github.pigerzhu.onelab.hook;
+package io.github.pigerzhu.onelab.hook.system;
+
+import io.github.pigerzhu.onelab.hook.core.HookConstants;
+import io.github.pigerzhu.onelab.hook.core.HookUtils;
 
 import android.util.Log;
 import android.util.Pair;
@@ -8,13 +11,13 @@ import de.robv.android.xposed.XposedBridge;
 import de.robv.android.xposed.XposedHelpers;
 import de.robv.android.xposed.callbacks.XC_LoadPackage;
 
-final class GosPermissionHook {
+public final class GosPermissionHook {
     private static final String GOS_ENDPOINT_BASE = "com.samsung.android.game.gos.endpoint.a";
 
     private GosPermissionHook() {
     }
 
-    static void install(XC_LoadPackage.LoadPackageParam lpparam) {
+    public static void install(XC_LoadPackage.LoadPackageParam lpparam) {
         try {
             Class<?> endpointBaseClass = XposedHelpers.findClass(GOS_ENDPOINT_BASE, lpparam.classLoader);
             XposedBridge.hookAllMethods(endpointBaseClass, "b", new XC_MethodHook() {

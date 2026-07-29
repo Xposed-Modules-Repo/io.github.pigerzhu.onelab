@@ -1,5 +1,19 @@
 package io.github.pigerzhu.onelab.hook;
 
+import io.github.pigerzhu.onelab.hook.applications.BiliFoldGateHook;
+import io.github.pigerzhu.onelab.hook.applications.GalleryLabsHook;
+import io.github.pigerzhu.onelab.hook.applications.QqFoldLayoutHook;
+import io.github.pigerzhu.onelab.hook.applications.TongchengSplitRulesHook;
+import io.github.pigerzhu.onelab.hook.applications.XhsFoldVideoHook;
+import io.github.pigerzhu.onelab.hook.applications.XiaomiShopFoldHook;
+import io.github.pigerzhu.onelab.hook.core.HookConstants;
+import io.github.pigerzhu.onelab.hook.samsung.SamsungSplitRulesHook;
+import io.github.pigerzhu.onelab.hook.system.AspectRatioHook;
+import io.github.pigerzhu.onelab.hook.system.CaptivePortalHook;
+import io.github.pigerzhu.onelab.hook.system.GosPermissionHook;
+import io.github.pigerzhu.onelab.hook.system.RefreshRateHook;
+import io.github.pigerzhu.onelab.hook.system.SdhmsThermalHook;
+
 import de.robv.android.xposed.IXposedHookLoadPackage;
 import de.robv.android.xposed.callbacks.XC_LoadPackage;
 

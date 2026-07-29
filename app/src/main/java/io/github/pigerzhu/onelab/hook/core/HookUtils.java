@@ -1,4 +1,6 @@
-package io.github.pigerzhu.onelab.hook;
+package io.github.pigerzhu.onelab.hook.core;
+
+import io.github.pigerzhu.onelab.hook.core.HookUtils;
 
 import android.content.ContentResolver;
 import android.content.Context;
@@ -10,15 +12,15 @@ import java.lang.reflect.Method;
 import de.robv.android.xposed.XposedBridge;
 import de.robv.android.xposed.XposedHelpers;
 
-final class HookUtils {
+public final class HookUtils {
     private HookUtils() {
     }
 
-    static boolean globalEnabled(ContentResolver resolver, String key, int fallback) {
+    public static boolean globalEnabled(ContentResolver resolver, String key, int fallback) {
         return resolver != null && Settings.Global.getInt(resolver, key, fallback) == 1;
     }
 
-    static Object findFieldValue(Object target, String name) {
+    public static Object findFieldValue(Object target, String name) {
         if (target == null) {
             return null;
         }
@@ -37,7 +39,7 @@ final class HookUtils {
         return null;
     }
 
-    static Object invokeStaticNoArg(String className, String methodName, ClassLoader classLoader) {
+    public static Object invokeStaticNoArg(String className, String methodName, ClassLoader classLoader) {
         try {
             Class<?> type = XposedHelpers.findClass(className, classLoader);
             Method method = type.getDeclaredMethod(methodName);
@@ -48,7 +50,7 @@ final class HookUtils {
         }
     }
 
-    static ContentResolver resolverFromController(Object controller) {
+    public static ContentResolver resolverFromController(Object controller) {
         Object context = findFieldValue(controller, "mContext");
         if (context == null) {
             return null;
@@ -56,7 +58,7 @@ final class HookUtils {
         return resolverFromContextObject(context);
     }
 
-    static ContentResolver resolverFromContextObject(Object context) {
+    public static ContentResolver resolverFromContextObject(Object context) {
         if (context == null) {
             return null;
         }
@@ -67,7 +69,7 @@ final class HookUtils {
         }
     }
 
-    static ContentResolver resolverFromAnyContext(Object target) {
+    public static ContentResolver resolverFromAnyContext(Object target) {
         ContentResolver resolver = resolverFromContextObject(firstContextFromObject(target));
         if (resolver != null) {
             return resolver;
@@ -80,7 +82,7 @@ final class HookUtils {
         return resolverFromContextObject(application);
     }
 
-    static Object firstContextFromObject(Object target) {
+    public static Object firstContextFromObject(Object target) {
         Object context = findFieldValue(target, "f5510a");
         if (context == null) {
             context = findFieldValue(target, "f3031a");
@@ -112,7 +114,7 @@ final class HookUtils {
         return context;
     }
 
-    static boolean isCallingOneLabOrShell(Object context) {
+    public static boolean isCallingOneLabOrShell(Object context) {
         int uid = Binder.getCallingUid();
         if (uid == 2000) {
             return true;
@@ -120,7 +122,7 @@ final class HookUtils {
         return packageForCallingUid(context, HookConstants.ONELAB_PACKAGE);
     }
 
-    static boolean packageForCallingUid(Object context, String expectedPackage) {
+    public static boolean packageForCallingUid(Object context, String expectedPackage) {
         if (context == null) {
             return false;
         }
@@ -145,7 +147,7 @@ final class HookUtils {
         return false;
     }
 
-    static void log(Throwable throwable) {
+    public static void log(Throwable throwable) {
         XposedBridge.log(throwable);
     }
 }

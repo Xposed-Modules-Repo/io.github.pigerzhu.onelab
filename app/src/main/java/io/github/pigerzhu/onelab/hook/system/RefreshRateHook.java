@@ -1,4 +1,7 @@
-package io.github.pigerzhu.onelab.hook;
+package io.github.pigerzhu.onelab.hook.system;
+
+import io.github.pigerzhu.onelab.hook.core.HookConstants;
+import io.github.pigerzhu.onelab.hook.core.HookUtils;
 
 import android.content.ContentResolver;
 import android.database.ContentObserver;
@@ -26,7 +29,7 @@ import de.robv.android.xposed.XposedHelpers;
 import de.robv.android.xposed.callbacks.XC_LoadPackage;
 
 /** Applies per-app refresh-rate policies without doing I/O or scheduling traversals in WM hot paths. */
-final class RefreshRateHook {
+public final class RefreshRateHook {
     private static final String POLICY_CLASS = "com.android.server.wm.RefreshRatePolicy";
     private static final String SPECIAL_LIST_CLASS =
             "com.samsung.android.server.packagefeature.util.PackageSpecialManagementList";
@@ -50,7 +53,7 @@ final class RefreshRateHook {
     private RefreshRateHook() {
     }
 
-    static void install(XC_LoadPackage.LoadPackageParam lpparam) {
+    public static void install(XC_LoadPackage.LoadPackageParam lpparam) {
         try {
             Class<?> policyClass = XposedHelpers.findClass(POLICY_CLASS, lpparam.classLoader);
             XposedBridge.hookAllMethods(policyClass, "getPreferredModeId", new XC_MethodHook() {

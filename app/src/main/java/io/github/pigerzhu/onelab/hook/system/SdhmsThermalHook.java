@@ -1,4 +1,7 @@
-package io.github.pigerzhu.onelab.hook;
+package io.github.pigerzhu.onelab.hook.system;
+
+import io.github.pigerzhu.onelab.hook.core.HookConstants;
+import io.github.pigerzhu.onelab.hook.core.HookUtils;
 
 import android.content.ContentResolver;
 import android.content.Context;
@@ -17,7 +20,7 @@ import de.robv.android.xposed.XposedBridge;
 import de.robv.android.xposed.XposedHelpers;
 import de.robv.android.xposed.callbacks.XC_LoadPackage;
 
-final class SdhmsThermalHook {
+public final class SdhmsThermalHook {
     private static final String SDHMS_BINDER_SERVICE = "com.sec.android.sdhms.b";
     private static final String SEM_MULTIWINDOW_MANAGER =
             "com.samsung.android.app.SemMultiWindowManager";
@@ -28,7 +31,7 @@ final class SdhmsThermalHook {
     private SdhmsThermalHook() {
     }
 
-    static void install(XC_LoadPackage.LoadPackageParam lpparam) {
+    public static void install(XC_LoadPackage.LoadPackageParam lpparam) {
         SdhmsCompatibility.Profile profile =
                 SdhmsCompatibility.detect(lpparam.classLoader);
         Class<?> implClass = profile == null ? null : XposedHelpers.findClassIfExists(
