@@ -8,34 +8,44 @@ It applies to production sources under `app/src/main`.
 | Location | Responsibility |
 | --- | --- |
 | `io.github.pigerzhu.onelab.MainActivity` | Activity lifecycle, page navigation, transitions, and feature composition only. |
-| `io.github.pigerzhu.onelab.*Screen` | One user-facing feature or one tightly related feature group. Owns its cards, dialogs, UI state, and event handling. |
-| `io.github.pigerzhu.onelab.*Presenter` | Stateful Android platform sessions that are more complex than settings I/O, such as a secondary-display presentation. |
+| `io.github.pigerzhu.onelab.navigation` | Page stack, predictive back, large-screen sidebar, transitions, and reusable application-picker navigation. |
+| `io.github.pigerzhu.onelab.feature.connectivity` | Network and captive-portal controls shown by the app. |
+| `io.github.pigerzhu.onelab.feature.performance` | Processing speed, thermal controls, and game heat-budget screens. |
+| `io.github.pigerzhu.onelab.feature.window` | Window management, refresh rate, aspect ratio, and foldable cover-display features. |
+| `io.github.pigerzhu.onelab.feature.applications` | User-facing controls for one specific third-party or Samsung application. |
+| `io.github.pigerzhu.onelab.feature.experiment` | Explicitly experimental user-facing controls. |
+| `io.github.pigerzhu.onelab.feature.diagnostics` | Diagnostic recording and report UI. |
 | `io.github.pigerzhu.onelab.system` | Privileged or device-specific I/O. Shell commands, Binder/service calls, Settings access wrappers, and Samsung service clients live here. No view construction. |
 | `io.github.pigerzhu.onelab.contract` | Setting keys and data contracts shared between the app UI and hook processes. No Android component or I/O code. |
-| `io.github.pigerzhu.onelab.hook` | LSPosed entry points and hooks. Hook code must not depend on Activity or Screen classes. |
+| `io.github.pigerzhu.onelab.hook.Entry` | Stable LSPosed package dispatcher. Its class name must stay compatible with `assets/xposed_init`. |
+| `io.github.pigerzhu.onelab.hook.core` | Hook constants and reflection/context utilities shared across hook processes. |
+| `io.github.pigerzhu.onelab.hook.system` | Android or Samsung service hooks, including WindowManager, captive portal, GOS, and SDHMS. |
+| `io.github.pigerzhu.onelab.hook.samsung` | Samsung framework policies shared by multiple applications, such as split-view rule translation. |
+| `io.github.pigerzhu.onelab.hook.applications` | Hooks scoped to one application package. |
 | `io.github.pigerzhu.onelab.ui` | Reusable visual components and theme primitives. No feature settings keys or privileged operations. |
 | `app/src/main/res` | Android resources. Shared icons and framework-required strings belong here. |
 | `tools` | Repeatable repository maintenance scripts. Generated files must name their generator. |
 | `analysis` and `apks` | Reverse-engineering evidence only. Production code must not load files from these directories. |
 
 Do not create generic `Utils`, `Manager`, or `Helper` classes. Name a class after the
-specific responsibility it owns. A new feature normally starts as `FeatureScreen`; add a
-`system/FeatureClient` only when privileged I/O would otherwise be mixed into the UI.
+specific responsibility it owns. A new feature normally starts in the matching `feature`
+domain; add a `system/FeatureClient` only when privileged I/O would otherwise be mixed
+into the UI.
 
 ## Dependency direction
 
 Normal app code follows this direction:
 
 ```text
-MainActivity -> Screen/Presenter -> system client
-                         |
-                         +-> ui components
+MainActivity -> feature Screen/Presenter -> system client
+                                 |
+                                 +-> ui components
 ```
 
 Hook code is a separate runtime boundary:
 
 ```text
-hook.Entry -> feature hooks -> HookConstants/HookUtils
+hook.Entry -> scoped hook package -> hook.core
 ```
 
 - UI and hooks read shared setting keys from `contract/SettingsKeys`.
@@ -46,7 +56,10 @@ hook.Entry -> feature hooks -> HookConstants/HookUtils
 ## File and class rules
 
 - One top-level production class per Java file.
-- A Screen owns one page or a small feature group. Split unrelated cards into separate Screens.
+- A Screen owns one page or a small feature group and lives in the matching `feature` package.
+- Navigation classes must not contain feature setting keys or privileged I/O.
+- Application hooks belong in `hook.applications`; cross-application Samsung policy belongs
+  in `hook.samsung`.
 - Prefer package-private classes and methods until another package genuinely needs the API.
 - At 400 lines, review a file for mixed responsibilities. Above 600 lines, split it before adding another feature.
 - Keep constants beside their owner. Put cross-process setting keys in `contract/SettingsKeys`.
@@ -78,7 +91,8 @@ hook.Entry -> feature hooks -> HookConstants/HookUtils
 - Entry cards navigate; they do not also expose detailed controls.
 - A control must reflect the last confirmed system state, not merely the requested state.
 - Controls that write continuously must defer the write until interaction ends unless live updates are essential.
-- New nested pages must set `MainActivity.nestedBackAction` to their owning parent page.
+- New nested pages must register their owning parent through
+  `MainActivity.setNestedBackAction(...)`.
 
 ## Verification and commits
 
