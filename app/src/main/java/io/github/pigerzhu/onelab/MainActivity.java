@@ -614,15 +614,35 @@ public class MainActivity extends Activity {
 
     private void interruptPageTransitionForBack() {
         if (!pageTransitionRunning) return;
-        for (int i = 0; i < pageHost.getChildCount(); i++) {
-            pageHost.getChildAt(i).animate().cancel();
+        int childCount = pageHost.getChildCount();
+        float[] translations = new float[childCount];
+        float[] alphas = new float[childCount];
+        float[] scaleXs = new float[childCount];
+        float[] scaleYs = new float[childCount];
+        for (int i = 0; i < childCount; i++) {
+            View child = pageHost.getChildAt(i);
+            translations[i] = child.getTranslationX();
+            alphas[i] = child.getAlpha();
+            scaleXs[i] = child.getScaleX();
+            scaleYs[i] = child.getScaleY();
         }
         SpringAnimation[] animations =
                 runningPageSprings.toArray(new SpringAnimation[0]);
         for (SpringAnimation animation : animations) {
             animation.cancel();
         }
+        for (int i = 0; i < childCount; i++) {
+            pageHost.getChildAt(i).animate().cancel();
+        }
+        for (int i = 0; i < childCount; i++) {
+            View child = pageHost.getChildAt(i);
+            child.setTranslationX(translations[i]);
+            child.setAlpha(alphas[i]);
+            child.setScaleX(scaleXs[i]);
+            child.setScaleY(scaleYs[i]);
+        }
         runningPageSprings.clear();
         pageTransitionRunning = false;
+        pageHost.invalidate();
     }
 }
