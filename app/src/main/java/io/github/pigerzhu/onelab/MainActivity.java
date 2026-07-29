@@ -5,7 +5,6 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.res.ColorStateList;
 import android.content.res.Configuration;
-import android.os.Build;
 import android.os.Bundle;
 import android.view.Gravity;
 import android.view.animation.Interpolator;
@@ -17,8 +16,6 @@ import android.widget.ImageButton;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.Toast;
-import android.window.OnBackInvokedCallback;
-import android.window.OnBackInvokedDispatcher;
 
 import androidx.dynamicanimation.animation.DynamicAnimation;
 import androidx.dynamicanimation.animation.SpringAnimation;
@@ -73,6 +70,7 @@ public class MainActivity extends Activity {
     private int selectedTopLevel = -1;
     private FoldSidebar foldSidebar;
     private boolean showingAppearancePage;
+    private PredictiveBackController predictiveBackController;
 
     @Override
     protected void attachBaseContext(Context newBase) {
@@ -105,7 +103,12 @@ public class MainActivity extends Activity {
         aspectRatioScreen = new AspectRatioScreen(this, ui, settings, appList);
         refreshRateScreen = new RefreshRateScreen(this, ui, settings, appList);
         diagnosticsScreen = new DiagnosticsScreen(this, ui);
-        registerBackGestureCallback();
+        predictiveBackController = PredictiveBackController.register(
+                this,
+                () -> currentPageView,
+                () -> pageTransitionRunning,
+                this::handleBackNavigation
+        );
         largeScreenLayout = isLargeScreen(getResources().getConfiguration());
         buildNavigationShell();
         if (savedInstanceState != null
@@ -142,6 +145,7 @@ public class MainActivity extends Activity {
 
     @Override
     protected void onDestroy() {
+        if (predictiveBackController != null) predictiveBackController.unregister();
         if (coverScreen != null) coverScreen.onDestroy();
         if (coverEdgeScreen != null) coverEdgeScreen.onDestroy();
         if (processingSpeedScreen != null) processingSpeedScreen.onDestroy();
@@ -152,13 +156,6 @@ public class MainActivity extends Activity {
     @Override
     public void onBackPressed() {
         handleBackNavigation();
-    }
-
-    private void registerBackGestureCallback() {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return;
-        OnBackInvokedCallback callback = this::handleBackNavigation;
-        getOnBackInvokedDispatcher().registerOnBackInvokedCallback(
-                OnBackInvokedDispatcher.PRIORITY_DEFAULT, callback);
     }
 
     private void handleBackNavigation() {
