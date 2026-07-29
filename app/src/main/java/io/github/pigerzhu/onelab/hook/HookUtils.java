@@ -1,6 +1,7 @@
 package io.github.pigerzhu.onelab.hook;
 
 import android.content.ContentResolver;
+import android.content.Context;
 import android.os.Binder;
 import android.provider.Settings;
 
@@ -67,15 +68,7 @@ final class HookUtils {
     }
 
     static ContentResolver resolverFromAnyContext(Object target) {
-        ContentResolver resolver = resolverFromContextObject(findFieldValue(target, "f5510a"));
-        if (resolver != null) {
-            return resolver;
-        }
-        resolver = resolverFromContextObject(findFieldValue(target, "mContext"));
-        if (resolver != null) {
-            return resolver;
-        }
-        resolver = resolverFromContextObject(findFieldValue(target, "context"));
+        ContentResolver resolver = resolverFromContextObject(firstContextFromObject(target));
         if (resolver != null) {
             return resolver;
         }
@@ -97,6 +90,24 @@ final class HookUtils {
         }
         if (context == null) {
             context = findFieldValue(target, "context");
+        }
+        if (context == null && target != null) {
+            for (Class<?> type = target.getClass(); type != null; type = type.getSuperclass()) {
+                for (java.lang.reflect.Field field : type.getDeclaredFields()) {
+                    if (!Context.class.isAssignableFrom(field.getType())) {
+                        continue;
+                    }
+                    try {
+                        field.setAccessible(true);
+                        context = field.get(target);
+                        if (context != null) {
+                            return context;
+                        }
+                    } catch (Throwable ignored) {
+                        // Continue through other Context fields.
+                    }
+                }
+            }
         }
         return context;
     }
