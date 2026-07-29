@@ -24,6 +24,8 @@ import androidx.dynamicanimation.animation.SpringForce;
 import com.google.android.material.card.MaterialCardView;
 import com.google.android.material.color.DynamicColors;
 
+import java.util.ArrayDeque;
+
 import io.github.pigerzhu.onelab.system.SettingsStore;
 import io.github.pigerzhu.onelab.ui.AppTheme;
 import io.github.pigerzhu.onelab.ui.ChoiceGroup;
@@ -66,10 +68,12 @@ public class MainActivity extends Activity {
     private long lastBackPressMs;
     private FrameLayout pageHost;
     private View currentPageView;
+    private final ArrayDeque<View> backPageStack = new ArrayDeque<>();
     private boolean largeScreenLayout;
     private int selectedTopLevel = -1;
     private FoldSidebar foldSidebar;
     private boolean showingAppearancePage;
+    private boolean predictiveParentPreviewEnabled = true;
     private PredictiveBackController predictiveBackController;
 
     @Override
@@ -106,6 +110,7 @@ public class MainActivity extends Activity {
         predictiveBackController = PredictiveBackController.register(
                 this,
                 () -> currentPageView,
+                () -> predictiveParentPreviewEnabled ? backPageStack.peek() : null,
                 () -> pageTransitionRunning,
                 this::handleBackNavigation
         );
@@ -479,21 +484,50 @@ public class MainActivity extends Activity {
 
     void switchPage(View nextPage, int direction) {
         View previousPage = currentPageView;
-        currentPageView = nextPage;
-        pageHost.addView(nextPage, new FrameLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+        predictiveParentPreviewEnabled = true;
 
-        if (previousPage == null || direction == 0) {
-            if (previousPage != null) pageHost.removeView(previousPage);
+        if (direction == 0) {
+            backPageStack.clear();
+            pageHost.removeAllViews();
+            currentPageView = nextPage;
+            pageHost.addView(nextPage, pageParams());
+            nextPage.setTranslationX(0f);
+            nextPage.setScaleX(1f);
+            nextPage.setScaleY(1f);
+            nextPage.setAlpha(1f);
+            return;
+        }
+
+        if (direction < 0 && !backPageStack.isEmpty()) {
+            View restoredPage = backPageStack.pop();
+            currentPageView = restoredPage;
+            animateDetailOut(previousPage, restoredPage);
+            return;
+        }
+
+        currentPageView = nextPage;
+        pageHost.addView(nextPage, pageParams());
+
+        if (previousPage == null) {
             nextPage.setTranslationX(0f);
             nextPage.setAlpha(1f);
             return;
         }
         if (direction > 0) {
+            backPageStack.push(previousPage);
             animateDetailIn(previousPage, nextPage);
         } else {
             animateDetailOut(previousPage, nextPage);
         }
+    }
+
+    void setPredictiveParentPreviewEnabled(boolean enabled) {
+        predictiveParentPreviewEnabled = enabled;
+    }
+
+    private FrameLayout.LayoutParams pageParams() {
+        return new FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT);
     }
 
     private void animateDetailIn(View previousPage, View nextPage) {
@@ -519,7 +553,6 @@ public class MainActivity extends Activity {
         springTranslationX(
                 nextPage, 0f, ENTER_SPRING_STIFFNESS, ENTER_SPRING_DAMPING,
                 (animation, canceled, value, velocity) -> {
-                    pageHost.removeView(previousPage);
                     pageTransitionRunning = false;
                 });
     }
@@ -527,7 +560,10 @@ public class MainActivity extends Activity {
     private void animateDetailOut(View previousPage, View nextPage) {
         pageTransitionRunning = true;
         int width = getResources().getDisplayMetrics().widthPixels;
+        nextPage.setVisibility(View.VISIBLE);
         nextPage.setTranslationX(-width * 0.16f);
+        nextPage.setScaleX(1f);
+        nextPage.setScaleY(1f);
         nextPage.setAlpha(0.92f);
         previousPage.bringToFront();
 

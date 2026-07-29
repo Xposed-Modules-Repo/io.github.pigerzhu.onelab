@@ -133,6 +133,7 @@ final class AppListToolbar {
 
     private void openSearch() {
         searching = true;
+        host.setPredictiveParentPreviewEnabled(false);
         titleView.setVisibility(View.GONE);
         searchButton.setVisibility(View.GONE);
         moreButton.setVisibility(View.GONE);
@@ -146,6 +147,7 @@ final class AppListToolbar {
     private void closeSearch() {
         if (!searching) return;
         searching = false;
+        host.setPredictiveParentPreviewEnabled(true);
         searchInput.setText("");
         searchInput.setVisibility(View.GONE);
         closeSearchButton.setVisibility(View.GONE);

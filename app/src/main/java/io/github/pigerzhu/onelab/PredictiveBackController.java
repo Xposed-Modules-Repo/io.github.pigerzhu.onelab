@@ -20,31 +20,35 @@ final class PredictiveBackController {
 
     private final Activity activity;
     private final Supplier<View> currentView;
+    private final Supplier<View> previewView;
     private final BooleanSupplier transitionRunning;
     private final Runnable backAction;
     private final OnBackInvokedCallback callback;
 
     private View gestureView;
-    private int swipeEdge = BackEvent.EDGE_LEFT;
+    private View gesturePreview;
 
     static PredictiveBackController register(
             Activity activity,
             Supplier<View> currentView,
+            Supplier<View> previewView,
             BooleanSupplier transitionRunning,
             Runnable backAction
     ) {
         return new PredictiveBackController(
-                activity, currentView, transitionRunning, backAction);
+                activity, currentView, previewView, transitionRunning, backAction);
     }
 
     private PredictiveBackController(
             Activity activity,
             Supplier<View> currentView,
+            Supplier<View> previewView,
             BooleanSupplier transitionRunning,
             Runnable backAction
     ) {
         this.activity = activity;
         this.currentView = currentView;
+        this.previewView = previewView;
         this.transitionRunning = transitionRunning;
         this.backAction = backAction;
         callback = Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE
@@ -64,9 +68,13 @@ final class PredictiveBackController {
             public void onBackStarted(BackEvent backEvent) {
                 if (transitionRunning.getAsBoolean()) return;
                 gestureView = currentView.get();
-                swipeEdge = backEvent.getSwipeEdge();
+                gesturePreview = previewView.get();
                 if (gestureView != null) {
                     gestureView.animate().cancel();
+                }
+                if (gesturePreview != null) {
+                    gesturePreview.animate().cancel();
+                    gesturePreview.setVisibility(View.VISIBLE);
                 }
             }
 
@@ -94,12 +102,18 @@ final class PredictiveBackController {
         }
         float clamped = Math.max(0f, Math.min(1f, progress));
         float eased = 1f - (float) Math.pow(1f - clamped, 3);
-        float maxTranslation = Math.min(view.getWidth() * 0.16f, dp(120));
-        float direction = swipeEdge == BackEvent.EDGE_RIGHT ? -1f : 1f;
-        view.setTranslationX(direction * maxTranslation * eased);
+        float width = view.getWidth();
+        float maxTranslation = Math.min(width * 0.28f, dp(220));
+        view.setTranslationX(maxTranslation * eased);
         float scale = 1f - (0.035f * eased);
         view.setScaleX(scale);
         view.setScaleY(scale);
+
+        View preview = gesturePreview;
+        if (preview != null && preview == previewView.get()) {
+            preview.setTranslationX((-width * 0.16f) * (1f - eased));
+            preview.setAlpha(0.92f + (0.08f * eased));
+        }
     }
 
     private void invokeBack() {
@@ -109,24 +123,50 @@ final class PredictiveBackController {
             resetGestureView(true);
         } else {
             gestureView = null;
+            gesturePreview = null;
         }
     }
 
     private void resetGestureView(boolean animate) {
         View view = gestureView;
+        View preview = gesturePreview;
         gestureView = null;
-        if (view == null) return;
+        gesturePreview = null;
+        if (view == null) {
+            resetPreview(preview, animate);
+            return;
+        }
         view.animate().cancel();
         if (!animate) {
             view.setTranslationX(0f);
             view.setScaleX(1f);
             view.setScaleY(1f);
+            resetPreview(preview, false);
             return;
         }
         view.animate()
                 .translationX(0f)
                 .scaleX(1f)
                 .scaleY(1f)
+                .setDuration(CANCEL_ANIMATION_MS)
+                .setInterpolator(CANCEL_EASING)
+                .start();
+        resetPreview(preview, true);
+    }
+
+    private void resetPreview(View preview, boolean animate) {
+        if (preview == null) return;
+        preview.animate().cancel();
+        float restingTranslation = -activity.getResources()
+                .getDisplayMetrics().widthPixels * 0.16f;
+        if (!animate) {
+            preview.setTranslationX(restingTranslation);
+            preview.setAlpha(0.92f);
+            return;
+        }
+        preview.animate()
+                .translationX(restingTranslation)
+                .alpha(0.92f)
                 .setDuration(CANCEL_ANIMATION_MS)
                 .setInterpolator(CANCEL_EASING)
                 .start();
