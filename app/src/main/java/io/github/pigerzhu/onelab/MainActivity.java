@@ -418,8 +418,20 @@ public class MainActivity extends Activity {
 
         LinearLayout.LayoutParams hostParams = new LinearLayout.LayoutParams(
                 0, ViewGroup.LayoutParams.MATCH_PARENT, 1);
-        hostParams.setMargins(ui.dp(6), ui.dp(12), ui.dp(12), ui.dp(12));
+        hostParams.setMargins(ui.dp(6), ui.dp(32), ui.dp(12), ui.dp(12));
         shell.addView(pageHost, hostParams);
+        shell.setOnApplyWindowInsetsListener((view, insets) -> {
+            int top = insets.getInsets(
+                    android.view.WindowInsets.Type.statusBars()).top + ui.dp(8);
+            LinearLayout.LayoutParams params =
+                    (LinearLayout.LayoutParams) pageHost.getLayoutParams();
+            if (params.topMargin != top) {
+                params.topMargin = top;
+                pageHost.setLayoutParams(params);
+            }
+            return insets;
+        });
+        shell.requestApplyInsets();
         setContentView(shell);
     }
 
