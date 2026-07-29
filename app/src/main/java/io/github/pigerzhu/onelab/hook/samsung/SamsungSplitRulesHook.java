@@ -157,6 +157,7 @@ public final class SamsungSplitRulesHook {
             ContentResolver resolver = HookUtils.resolverFromAnyContext(atm);
             if (repository == null || resolver == null) {
                 Log.w(TAG, "Samsung split repository is unavailable");
+                XposedBridge.log(TAG + ": Samsung split repository is unavailable");
                 return;
             }
 
@@ -229,6 +230,8 @@ public final class SamsungSplitRulesHook {
                 }
                 INJECTED_PACKAGES.add(ruleSet.packageName);
                 Log.i(TAG, "Injected " + ruleSet.pairs.length
+                        + " split rules for " + ruleSet.packageName);
+                XposedBridge.log(TAG + ": Injected " + ruleSet.pairs.length
                         + " split rules for " + ruleSet.packageName);
             } catch (Throwable throwable) {
                 rules.remove(ruleSet.packageName);

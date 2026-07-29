@@ -35,6 +35,7 @@ import java.util.zip.ZipOutputStream;
 import org.json.JSONObject;
 
 import io.github.pigerzhu.onelab.BuildConfig;
+import io.github.pigerzhu.onelab.system.SdhmsClient;
 import io.github.pigerzhu.onelab.system.Shell;
 
 /** Builds a privacy-filtered support bundle on explicit user request. */
@@ -107,6 +108,8 @@ public final class DiagnosticReport {
         if (!hasCompletedSession(context)) {
             throw new IOException("请先完成一次记录");
         }
+        RuntimeCompatibilityReport.Result compatibility =
+                RuntimeCompatibilityReport.collect(context);
         File directory = reportDirectory(context);
         if (!directory.exists() && !directory.mkdirs()) {
             throw new IOException("无法创建诊断目录");
@@ -121,9 +124,12 @@ public final class DiagnosticReport {
             put(zip, "device.txt", buildDevice(context));
             put(zip, "features.txt", buildFeatures(context));
             put(zip, "packages.txt", buildPackages(context));
+            put(zip, "compatibility.txt", redact(compatibility.compatibility));
+            put(zip, "hook-runtime.txt", redact(compatibility.hookLog));
             put(zip, "logcat.txt", buildFilteredLogcat(context));
             put(zip, "privacy.txt",
-                    "本报告仅包含 OneLab 功能状态、相关应用版本、设备兼容信息和过滤后的日志。\n"
+                    "本报告仅包含 OneLab 功能状态、相关应用版本、设备兼容信息、"
+                            + "过滤后的复现日志与 OneLab 持久 Hook 日志。\n"
                             + "未主动收集账号、网络名称、位置、完整应用列表、截图或应用数据。\n");
         }
         Uri uri;
@@ -156,7 +162,7 @@ public final class DiagnosticReport {
     private static String buildSummary(Context context) {
         long startedAt = sessionStartedAt(context);
         long stoppedAt = sessionStoppedAt(context);
-        return "report_format=1\n"
+        return "report_format=2\n"
                 + "generated_at=" + isoTime(System.currentTimeMillis()) + "\n"
                 + "recording_started_at="
                 + (startedAt == 0 ? "not_started" : isoTime(startedAt)) + "\n"
@@ -226,6 +232,12 @@ public final class DiagnosticReport {
                 .append(summarizeValue(enhancedProcessing)).append('\n');
         output.append("value=games.global_heat_budget | raw=")
                 .append(summarizeValue(gameHeat)).append('\n');
+        output.append("value=thermal.service_delta | raw=")
+                .append(sdhmsValue(SdhmsClient.getThermalDelta())).append('\n');
+        output.append("value=thermal.service_supported_delta | raw=")
+                .append(sdhmsValue(SdhmsClient.getSupportedThermalDelta())).append('\n');
+        output.append("value=thermal.service_control_flag | raw=")
+                .append(sdhmsValue(SdhmsClient.getThermalControlFlag())).append('\n');
 
         String multiStar = Settings.Secure.getString(
                 context.getContentResolver(), "multistar_setting_json_repository");
@@ -258,6 +270,12 @@ public final class DiagnosticReport {
         } catch (Exception ignored) {
             return false;
         }
+    }
+
+    private static String sdhmsValue(int value) {
+        return value == SdhmsClient.VALUE_UNAVAILABLE
+                ? "unavailable"
+                : String.valueOf(value);
     }
 
     private static String buildPackages(Context context) {

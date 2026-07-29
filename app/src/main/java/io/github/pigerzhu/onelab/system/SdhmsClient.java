@@ -7,8 +7,24 @@ public final class SdhmsClient {
     private static final String SDHMS_SERVICE = "sdhms";
     private static final String SDHMS_DESCRIPTOR =
             "com.sec.android.sdhms.ISamsungDeviceHealthManager";
+    private static final int GET_THERMAL_DELTA = 30;
+    private static final int GET_SUPPORTED_THERMAL_DELTA = 31;
+    private static final int GET_THERMAL_CONTROL_FLAG = 39;
+    public static final int VALUE_UNAVAILABLE = Integer.MIN_VALUE;
 
     private SdhmsClient() {
+    }
+
+    public static int getThermalDelta() {
+        return getInt(GET_THERMAL_DELTA, VALUE_UNAVAILABLE);
+    }
+
+    public static int getSupportedThermalDelta() {
+        return getInt(GET_SUPPORTED_THERMAL_DELTA, VALUE_UNAVAILABLE);
+    }
+
+    public static int getThermalControlFlag() {
+        return getInt(GET_THERMAL_CONTROL_FLAG, VALUE_UNAVAILABLE);
     }
 
     public static int getInt(int transactionCode, int fallback) {

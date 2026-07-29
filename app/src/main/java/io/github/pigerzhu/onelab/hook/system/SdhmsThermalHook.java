@@ -45,10 +45,13 @@ public final class SdhmsThermalHook {
         if (profile == null || implClass == null) {
             Log.w(HookConstants.TAG,
                     "SDHMS implementation profile unavailable; stable hooks remain active");
+            persistentLog(
+                    "SDHMS implementation profile unavailable; stable hooks remain active");
             return;
         }
 
         Log.i(HookConstants.TAG, "Matched SDHMS profile: " + profile.label);
+        persistentLog("Matched SDHMS profile: " + profile.label);
         hookSdhmsService(lpparam, implClass, profile);
         hookSdhmsThermalDeltaController(lpparam, profile);
         hookSdhmsSiopPerfCaps(lpparam, profile);
@@ -144,6 +147,7 @@ public final class SdhmsThermalHook {
                 }
             });
             Log.i(HookConstants.TAG, "Hooked SDHMS ThermalGuardian gates");
+            persistentLog("Hooked SDHMS ThermalGuardian gates");
         } catch (Throwable t) {
             XposedBridge.log(HookConstants.TAG + ": SDHMS ThermalGuardian hook failed");
             XposedBridge.log(t);
@@ -173,6 +177,7 @@ public final class SdhmsThermalHook {
                 }
             });
             Log.i(HookConstants.TAG, "Hooked SDHMS SSRM multi-window limit");
+            persistentLog("Hooked SDHMS SSRM multi-window limit");
         } catch (Throwable t) {
             XposedBridge.log(HookConstants.TAG + ": SDHMS SSRM multi-window hook failed");
             XposedBridge.log(t);
@@ -221,6 +226,7 @@ public final class SdhmsThermalHook {
                 }
             });
             Log.i(HookConstants.TAG, "Hooked SDHMS " + label + " cap class " + className);
+            persistentLog("Hooked SDHMS " + label + " cap class " + className);
         } catch (Throwable t) {
             XposedBridge.log(HookConstants.TAG + ": SDHMS " + label + " cap hook failed: " + className);
             XposedBridge.log(t);
@@ -303,6 +309,7 @@ public final class SdhmsThermalHook {
             }
         });
             Log.i(HookConstants.TAG, "Hooked SDHMS binder thermal delta entry");
+            persistentLog("Hooked SDHMS binder thermal delta entry");
         } catch (Throwable t) {
             XposedBridge.log(HookConstants.TAG + ": SDHMS binder thermal hook failed");
             XposedBridge.log(t);
@@ -360,6 +367,7 @@ public final class SdhmsThermalHook {
                 }
                     });
             Log.i(HookConstants.TAG, "Hooked SDHMS ThermalGuardian controller");
+            persistentLog("Hooked SDHMS ThermalGuardian controller");
         } catch (Throwable t) {
             XposedBridge.log(HookConstants.TAG + ": SDHMS ThermalGuardian controller hook failed");
             XposedBridge.log(t);
@@ -550,5 +558,9 @@ public final class SdhmsThermalHook {
             XposedBridge.log(HookConstants.TAG + ": SDHMS hidden thermal sync failed");
             XposedBridge.log(t);
         }
+    }
+
+    private static void persistentLog(String message) {
+        XposedBridge.log(HookConstants.TAG + ": " + message);
     }
 }
