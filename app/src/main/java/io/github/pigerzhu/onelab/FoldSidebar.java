@@ -85,6 +85,14 @@ final class FoldSidebar {
         setExpanded(false, true);
     }
 
+    boolean isExpanded() {
+        return targetExpanded;
+    }
+
+    void setExpandedImmediately(boolean value) {
+        setExpanded(value, false);
+    }
+
     private void setExpanded(boolean value, boolean animate) {
         if (targetExpanded == value) return;
         targetExpanded = value;

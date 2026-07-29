@@ -34,6 +34,7 @@ import io.github.pigerzhu.onelab.ui.Ui;
 
 public class MainActivity extends Activity {
     private static final String STATE_APPEARANCE_PAGE = "appearance_page";
+    private static final String STATE_SIDEBAR_EXPANDED = "sidebar_expanded";
     private static final Interpolator PAGE_EASING =
             new PathInterpolator(0.2f, 0f, 0f, 1f);
     private static final long PAGE_ANIMATION_MS = 360L;
@@ -109,7 +110,11 @@ public class MainActivity extends Activity {
         buildNavigationShell();
         if (savedInstanceState != null
                 && savedInstanceState.getBoolean(STATE_APPEARANCE_PAGE, false)) {
-            showAppearanceSettingsPage();
+            if (foldSidebar != null) {
+                foldSidebar.setExpandedImmediately(
+                        savedInstanceState.getBoolean(STATE_SIDEBAR_EXPANDED, false));
+            }
+            showAppearanceSettingsPage(true);
         } else if (largeScreenLayout) {
             showLargeScreenPrompt();
         } else {
@@ -120,6 +125,9 @@ public class MainActivity extends Activity {
     @Override
     protected void onSaveInstanceState(Bundle outState) {
         outState.putBoolean(STATE_APPEARANCE_PAGE, showingAppearancePage);
+        if (foldSidebar != null) {
+            outState.putBoolean(STATE_SIDEBAR_EXPANDED, foldSidebar.isExpanded());
+        }
         super.onSaveInstanceState(outState);
     }
 
@@ -233,11 +241,17 @@ public class MainActivity extends Activity {
     }
 
     private void showAppearanceSettingsPage() {
+        showAppearanceSettingsPage(false);
+    }
+
+    private void showAppearanceSettingsPage(boolean preserveSidebarState) {
         showingAppearancePage = true;
         selectedTopLevel = -1;
         if (foldSidebar != null) {
             foldSidebar.setSelectedSection(-1);
-            foldSidebar.collapse();
+            if (!preserveSidebarState) {
+                foldSidebar.collapse();
+            }
         }
         showingHomePage = false;
         nestedBackAction = null;
