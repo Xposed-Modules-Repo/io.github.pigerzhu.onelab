@@ -25,25 +25,21 @@ public final class SettingsStore {
         }
     }
 
-    public void setGlobal(String key, String value) {
-        try {
-            Settings.Global.putString(context.getContentResolver(), key, value);
-            Toast.makeText(context, "已保存", Toast.LENGTH_SHORT).show();
-        } catch (SecurityException e) {
-            if (Shell.runSu("settings put global " + key + " " + value)) {
-                Toast.makeText(context, "已通过 root 保存", Toast.LENGTH_SHORT).show();
-            } else {
-                Toast.makeText(context, "保存失败，请授予 WRITE_SECURE_SETTINGS 或 root", Toast.LENGTH_LONG).show();
-            }
+    public boolean setGlobal(String key, String value) {
+        boolean direct = putGlobalDirect(key, value);
+        boolean saved = direct || putWithRoot("global", key, value);
+        if (saved) {
+            Toast.makeText(context, direct ? "已保存" : "已通过 root 保存",
+                    Toast.LENGTH_SHORT).show();
+        } else {
+            Toast.makeText(context, "保存失败，请授予 WRITE_SECURE_SETTINGS 或 root",
+                    Toast.LENGTH_LONG).show();
         }
+        return saved;
     }
 
-    public void putGlobalQuietly(String key, String value) {
-        try {
-            Settings.Global.putString(context.getContentResolver(), key, value);
-        } catch (SecurityException e) {
-            Shell.runSu("settings put global " + key + " '" + value + "'");
-        }
+    public boolean putGlobalQuietly(String key, String value) {
+        return putGlobalDirect(key, value) || putWithRoot("global", key, value);
     }
 
     public String getSystem(String key, String defValue) {
@@ -69,25 +65,21 @@ public final class SettingsStore {
         }
     }
 
-    public void setSecure(String key, String value) {
-        try {
-            Settings.Secure.putString(context.getContentResolver(), key, value);
-        } catch (SecurityException e) {
-            Shell.runSu("settings put secure " + key + " " + value);
-        }
+    public boolean setSecure(String key, String value) {
+        return putSecureDirect(key, value) || putWithRoot("secure", key, value);
     }
 
-    public void setSecureWithToast(String key, String value) {
-        try {
-            Settings.Secure.putString(context.getContentResolver(), key, value);
-            Toast.makeText(context, "已保存", Toast.LENGTH_SHORT).show();
-        } catch (SecurityException e) {
-            if (Shell.runSu("settings put secure " + key + " " + value)) {
-                Toast.makeText(context, "已通过 root 保存", Toast.LENGTH_SHORT).show();
-            } else {
-                Toast.makeText(context, "保存失败，请授予 WRITE_SECURE_SETTINGS 或 root", Toast.LENGTH_LONG).show();
-            }
+    public boolean setSecureWithToast(String key, String value) {
+        boolean direct = putSecureDirect(key, value);
+        boolean saved = direct || putWithRoot("secure", key, value);
+        if (saved) {
+            Toast.makeText(context, direct ? "已保存" : "已通过 root 保存",
+                    Toast.LENGTH_SHORT).show();
+        } else {
+            Toast.makeText(context, "保存失败，请授予 WRITE_SECURE_SETTINGS 或 root",
+                    Toast.LENGTH_LONG).show();
         }
+        return saved;
     }
 
     public boolean runSu(String command) {
@@ -96,5 +88,57 @@ public final class SettingsStore {
 
     public String runSuForOutput(String command) {
         return Shell.runSuForOutput(command);
+    }
+
+    private boolean putGlobalDirect(String key, String value) {
+        try {
+            return Settings.Global.putString(context.getContentResolver(), key, value)
+                    && valueEquals(value, Settings.Global.getString(
+                    context.getContentResolver(), key));
+        } catch (SecurityException ignored) {
+            return false;
+        }
+    }
+
+    private boolean putSecureDirect(String key, String value) {
+        try {
+            return Settings.Secure.putString(context.getContentResolver(), key, value)
+                    && valueEquals(value, Settings.Secure.getString(
+                    context.getContentResolver(), key));
+        } catch (SecurityException ignored) {
+            return false;
+        }
+    }
+
+    private boolean putWithRoot(String namespace, String key, String value) {
+        String command = value == null
+                ? "settings delete " + namespace + " " + shellQuote(key)
+                : "settings put " + namespace + " " + shellQuote(key)
+                + " " + shellQuote(value);
+        if (!Shell.runSu(command)) {
+            return false;
+        }
+        String actual = value == null
+                ? runSuForOutput("settings get " + namespace + " " + shellQuote(key))
+                : namespaceValue(namespace, key);
+        return valueEquals(value, actual);
+    }
+
+    private String namespaceValue(String namespace, String key) {
+        if ("global".equals(namespace)) {
+            return Settings.Global.getString(context.getContentResolver(), key);
+        }
+        if ("secure".equals(namespace)) {
+            return Settings.Secure.getString(context.getContentResolver(), key);
+        }
+        return runSuForOutput("settings get " + namespace + " " + shellQuote(key));
+    }
+
+    private static boolean valueEquals(String expected, String actual) {
+        return expected == null ? actual == null : expected.equals(actual);
+    }
+
+    static String shellQuote(String value) {
+        return "'" + value.replace("'", "'\\''") + "'";
     }
 }

@@ -1,6 +1,7 @@
 package io.github.pigerzhu.onelab;
 
 import android.app.Activity;
+import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.Intent;
 import android.content.res.ColorStateList;
@@ -171,6 +172,7 @@ public class MainActivity extends Activity {
     }
 
     @Override
+    @SuppressLint("GestureBackNavigation")
     public void onBackPressed() {
         handleBackNavigation();
     }

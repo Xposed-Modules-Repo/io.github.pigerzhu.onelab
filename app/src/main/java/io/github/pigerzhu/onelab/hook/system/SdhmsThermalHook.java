@@ -3,6 +3,7 @@ package io.github.pigerzhu.onelab.hook.system;
 import io.github.pigerzhu.onelab.hook.core.HookConstants;
 import io.github.pigerzhu.onelab.hook.core.HookUtils;
 
+import android.annotation.SuppressLint;
 import android.content.ContentResolver;
 import android.content.Context;
 import android.content.Intent;
@@ -508,6 +509,7 @@ public final class SdhmsThermalHook {
         }
     }
 
+    @SuppressLint("WrongConstant")
     private static void sendThermalDeltaChanged(Context context, int delta) {
         Intent intent = new Intent("com.sec.android.sdhms.action.THERMAL_THROTTLING_DELTA_CHANGED");
         intent.addFlags(16777216);

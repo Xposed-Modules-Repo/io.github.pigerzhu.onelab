@@ -11,6 +11,8 @@ import android.window.OnBackAnimationCallback;
 import android.window.OnBackInvokedCallback;
 import android.window.OnBackInvokedDispatcher;
 
+import androidx.annotation.RequiresApi;
+
 import java.util.function.BooleanSupplier;
 import java.util.function.Supplier;
 
@@ -78,6 +80,7 @@ public final class PredictiveBackController {
         activity.getOnBackInvokedDispatcher().unregisterOnBackInvokedCallback(callback);
     }
 
+    @RequiresApi(Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
     private OnBackAnimationCallback animationCallback() {
         return new OnBackAnimationCallback() {
             @Override

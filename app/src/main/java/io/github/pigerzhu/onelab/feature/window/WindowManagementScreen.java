@@ -98,8 +98,7 @@ public final class WindowManagementScreen {
                 root.put("settings", settingsNode);
             }
             settingsNode.put(settingKey, enabled);
-            settings.setSecure(repositoryKey, root.toString());
-            return true;
+            return settings.setSecure(repositoryKey, root.toString());
         } catch (Exception ignored) {
             return false;
         }

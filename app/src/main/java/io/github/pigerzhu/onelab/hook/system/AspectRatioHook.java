@@ -100,9 +100,9 @@ public final class AspectRatioHook {
                 return (Integer) displayId == INNER_DISPLAY_ID;
             }
         } catch (Throwable ignored) {
-            // If we cannot resolve the display, fall through and apply so the feature still works.
+            // Preserve the system policy when an inner-only rule cannot identify the display.
         }
-        return true;
+        return false;
     }
 
     private static String packageNameOf(Object activityRecord) {
