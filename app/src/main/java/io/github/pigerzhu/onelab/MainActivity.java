@@ -33,6 +33,7 @@ import io.github.pigerzhu.onelab.ui.ChoiceGroup;
 import io.github.pigerzhu.onelab.ui.Ui;
 
 public class MainActivity extends Activity {
+    private static final String STATE_APPEARANCE_PAGE = "appearance_page";
     private static final Interpolator PAGE_EASING =
             new PathInterpolator(0.2f, 0f, 0f, 1f);
     private static final long PAGE_ANIMATION_MS = 360L;
@@ -70,6 +71,7 @@ public class MainActivity extends Activity {
     private boolean largeScreenLayout;
     private int selectedTopLevel = -1;
     private FoldSidebar foldSidebar;
+    private boolean showingAppearancePage;
 
     @Override
     protected void attachBaseContext(Context newBase) {
@@ -105,11 +107,20 @@ public class MainActivity extends Activity {
         registerBackGestureCallback();
         largeScreenLayout = isLargeScreen(getResources().getConfiguration());
         buildNavigationShell();
-        if (largeScreenLayout) {
+        if (savedInstanceState != null
+                && savedInstanceState.getBoolean(STATE_APPEARANCE_PAGE, false)) {
+            showAppearanceSettingsPage();
+        } else if (largeScreenLayout) {
             showLargeScreenPrompt();
         } else {
             showHomePage();
         }
+    }
+
+    @Override
+    protected void onSaveInstanceState(Bundle outState) {
+        outState.putBoolean(STATE_APPEARANCE_PAGE, showingAppearancePage);
+        super.onSaveInstanceState(outState);
     }
 
     @Override
@@ -176,6 +187,7 @@ public class MainActivity extends Activity {
             showLargeScreenPrompt();
             return;
         }
+        showingAppearancePage = false;
         showingHomePage = true;
         selectedTopLevel = -1;
         nestedBackAction = null;
@@ -221,6 +233,7 @@ public class MainActivity extends Activity {
     }
 
     private void showAppearanceSettingsPage() {
+        showingAppearancePage = true;
         selectedTopLevel = -1;
         if (foldSidebar != null) {
             foldSidebar.setSelectedSection(-1);
@@ -381,6 +394,7 @@ public class MainActivity extends Activity {
     }
 
     private void showLargeScreenPrompt() {
+        showingAppearancePage = false;
         showingHomePage = true;
         nestedBackAction = null;
         selectedTopLevel = -1;
@@ -424,6 +438,7 @@ public class MainActivity extends Activity {
     }
 
     private void markTopLevel(int section) {
+        showingAppearancePage = false;
         selectedTopLevel = section;
         if (foldSidebar != null) {
             foldSidebar.setSelectedSection(section);
