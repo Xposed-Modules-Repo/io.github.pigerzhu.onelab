@@ -491,6 +491,10 @@ public class MainActivity extends Activity {
         return configuration.screenWidthDp >= 600;
     }
 
+    public boolean isUsingLargeScreenLayout() {
+        return largeScreenLayout;
+    }
+
     private int topLevelEnterDirection() {
         return largeScreenLayout ? 0 : 1;
     }

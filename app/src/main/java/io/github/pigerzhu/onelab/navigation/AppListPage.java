@@ -134,17 +134,21 @@ public final class AppListPage {
         LinearLayout page = new LinearLayout(host);
         page.setOrientation(LinearLayout.VERTICAL);
         page.setBackgroundColor(ui.colorSurface);
-        page.setPadding(ui.dp(16), ui.dp(24), ui.dp(16), 0);
-        page.setOnApplyWindowInsetsListener((view, insets) -> {
-            int statusBarTop = insets.getInsets(WindowInsets.Type.statusBars()).top;
-            view.setPadding(
-                    ui.dp(16),
-                    Math.max(ui.dp(24), statusBarTop + ui.dp(8)),
-                    ui.dp(16),
-                    0);
-            return insets;
-        });
-        page.requestApplyInsets();
+        if (host.isUsingLargeScreenLayout()) {
+            page.setPadding(ui.dp(16), ui.dp(8), ui.dp(16), 0);
+        } else {
+            page.setPadding(ui.dp(16), ui.dp(24), ui.dp(16), 0);
+            page.setOnApplyWindowInsetsListener((view, insets) -> {
+                int statusBarTop = insets.getInsets(WindowInsets.Type.statusBars()).top;
+                view.setPadding(
+                        ui.dp(16),
+                        Math.max(ui.dp(24), statusBarTop + ui.dp(8)),
+                        ui.dp(16),
+                        0);
+                return insets;
+            });
+            page.requestApplyInsets();
+        }
 
         AppListToolbar toolbar = new AppListToolbar(
                 host,
