@@ -12,7 +12,6 @@ OneLab 是一个面向三星设备的 LSPosed 模块，重点补充系统中无�
 
 ### 网络与连接
 
-- 开放网络认证页面保活
 - 自定义认证页面关闭延迟
 
 ### 性能与温控
@@ -48,7 +47,7 @@ OneLab 是一个面向三星设备的 LSPosed 模块，重点补充系统中无�
 - Samsung One UI 设备
 - Android 13 或更高版本
 - Root
-- LSPosed，Xposed API 100
+- LSPosed, Xposed API 100
 
 部分功能依赖特定三星服务、硬件能力或目标应用版本，因此不会在所有设备上产生相同效果。
 
