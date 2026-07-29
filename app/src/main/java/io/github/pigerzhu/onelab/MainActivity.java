@@ -7,8 +7,6 @@ import android.content.res.ColorStateList;
 import android.content.res.Configuration;
 import android.os.Bundle;
 import android.view.Gravity;
-import android.view.animation.Interpolator;
-import android.view.animation.PathInterpolator;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.FrameLayout;
@@ -17,15 +15,10 @@ import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.Toast;
 
-import androidx.dynamicanimation.animation.DynamicAnimation;
-import androidx.dynamicanimation.animation.SpringAnimation;
-import androidx.dynamicanimation.animation.SpringForce;
-
 import com.google.android.material.card.MaterialCardView;
 import com.google.android.material.color.DynamicColors;
 
 import java.util.ArrayDeque;
-import java.util.ArrayList;
 
 import io.github.pigerzhu.onelab.system.SettingsStore;
 import io.github.pigerzhu.onelab.ui.AppTheme;
@@ -35,13 +28,6 @@ import io.github.pigerzhu.onelab.ui.Ui;
 public class MainActivity extends Activity {
     private static final String STATE_APPEARANCE_PAGE = "appearance_page";
     private static final String STATE_SIDEBAR_EXPANDED = "sidebar_expanded";
-    private static final Interpolator PAGE_EASING =
-            new PathInterpolator(0.2f, 0f, 0f, 1f);
-    private static final long PAGE_ANIMATION_MS = 360L;
-    private static final float ENTER_SPRING_STIFFNESS = 300f;
-    private static final float ENTER_SPRING_DAMPING = 1f;
-    private static final float EXIT_SPRING_STIFFNESS = 340f;
-    private static final float EXIT_SPRING_DAMPING = 1f;
 
     private Ui ui;
     private NetworkScreen networkScreen;
@@ -65,12 +51,11 @@ public class MainActivity extends Activity {
     private DiagnosticsScreen diagnosticsScreen;
     boolean showingHomePage = true;
     Runnable nestedBackAction;
-    private boolean pageTransitionRunning;
     private long lastBackPressMs;
     private FrameLayout pageHost;
     private View currentPageView;
     private final ArrayDeque<View> backPageStack = new ArrayDeque<>();
-    private final ArrayList<SpringAnimation> runningPageSprings = new ArrayList<>();
+    private final PageTransitionController pageTransitions = new PageTransitionController();
     private boolean largeScreenLayout;
     private int selectedTopLevel = -1;
     private FoldSidebar foldSidebar;
@@ -113,7 +98,7 @@ public class MainActivity extends Activity {
                 this,
                 () -> currentPageView,
                 () -> predictiveParentPreviewEnabled ? backPageStack.peek() : null,
-                () -> pageTransitionRunning,
+                pageTransitions::isRunning,
                 this::interruptPageTransitionForBack,
                 this::handleBackNavigation
         );
@@ -153,6 +138,7 @@ public class MainActivity extends Activity {
 
     @Override
     protected void onDestroy() {
+        pageTransitions.interrupt();
         if (predictiveBackController != null) predictiveBackController.unregister();
         if (coverScreen != null) coverScreen.onDestroy();
         if (coverEdgeScreen != null) coverEdgeScreen.onDestroy();
@@ -167,7 +153,7 @@ public class MainActivity extends Activity {
     }
 
     private void handleBackNavigation() {
-        if (pageTransitionRunning) return;
+        if (pageTransitions.isRunning()) return;
         if (nestedBackAction != null) {
             Runnable action = nestedBackAction;
             nestedBackAction = null;
@@ -535,114 +521,19 @@ public class MainActivity extends Activity {
 
     private void animateDetailIn(View previousPage, View nextPage) {
         int width = getResources().getDisplayMetrics().widthPixels;
-        pageTransitionRunning = true;
-        nextPage.setTranslationX(width);
-        nextPage.setAlpha(1f);
-        previousPage.setTranslationX(0f);
-        previousPage.setAlpha(1f);
-
-        previousPage.animate()
-                .translationX(-width * 0.16f)
-                .alpha(0.92f)
-                .setDuration(PAGE_ANIMATION_MS)
-                .setInterpolator(PAGE_EASING)
-                .start();
-
-        nextPage.animate()
-                .alpha(1f)
-                .setDuration(PAGE_ANIMATION_MS)
-                .setInterpolator(PAGE_EASING)
-                .start();
-        springTranslationX(
-                nextPage, 0f, ENTER_SPRING_STIFFNESS, ENTER_SPRING_DAMPING,
-                (animation, canceled, value, velocity) -> {
-                    pageTransitionRunning = false;
-                });
+        pageTransitions.animateIn(previousPage, nextPage, width);
     }
 
     private void animateDetailOut(View previousPage, View nextPage) {
-        pageTransitionRunning = true;
         int width = getResources().getDisplayMetrics().widthPixels;
-        boolean retainedPreview = nextPage.getParent() == pageHost;
-        nextPage.setVisibility(View.VISIBLE);
-        nextPage.setScaleX(1f);
-        nextPage.setScaleY(1f);
-        if (!retainedPreview) {
+        if (nextPage.getParent() != pageHost) {
             nextPage.setTranslationX(-width * 0.16f);
             nextPage.setAlpha(0.92f);
         }
-        previousPage.bringToFront();
-
-        nextPage.animate()
-                .alpha(1f)
-                .setDuration(PAGE_ANIMATION_MS)
-                .setInterpolator(PAGE_EASING)
-                .start();
-        springTranslationX(
-                nextPage, 0f, EXIT_SPRING_STIFFNESS, EXIT_SPRING_DAMPING, null);
-        springTranslationX(
-                previousPage, width, EXIT_SPRING_STIFFNESS, EXIT_SPRING_DAMPING,
-                (animation, canceled, value, velocity) -> {
-                    if (canceled) return;
-                    pageHost.removeView(previousPage);
-                    pageTransitionRunning = false;
-                });
-    }
-
-    private void springTranslationX(
-            View view,
-            float finalPosition,
-            float stiffness,
-            float damping,
-            DynamicAnimation.OnAnimationEndListener endListener
-    ) {
-        SpringForce force = new SpringForce(finalPosition)
-                .setStiffness(stiffness)
-                .setDampingRatio(damping);
-        SpringAnimation animation = new SpringAnimation(
-                view, DynamicAnimation.TRANSLATION_X);
-        runningPageSprings.add(animation);
-        animation.setSpring(force);
-        animation.setMinimumVisibleChange(0.5f);
-        animation.addEndListener((endedAnimation, canceled, value, velocity) ->
-                runningPageSprings.remove(endedAnimation));
-        if (endListener != null) {
-            animation.addEndListener(endListener);
-        }
-        animation.start();
+        pageTransitions.animateOut(pageHost, previousPage, nextPage, width);
     }
 
     private void interruptPageTransitionForBack() {
-        if (!pageTransitionRunning) return;
-        int childCount = pageHost.getChildCount();
-        float[] translations = new float[childCount];
-        float[] alphas = new float[childCount];
-        float[] scaleXs = new float[childCount];
-        float[] scaleYs = new float[childCount];
-        for (int i = 0; i < childCount; i++) {
-            View child = pageHost.getChildAt(i);
-            translations[i] = child.getTranslationX();
-            alphas[i] = child.getAlpha();
-            scaleXs[i] = child.getScaleX();
-            scaleYs[i] = child.getScaleY();
-        }
-        SpringAnimation[] animations =
-                runningPageSprings.toArray(new SpringAnimation[0]);
-        for (SpringAnimation animation : animations) {
-            animation.cancel();
-        }
-        for (int i = 0; i < childCount; i++) {
-            pageHost.getChildAt(i).animate().cancel();
-        }
-        for (int i = 0; i < childCount; i++) {
-            View child = pageHost.getChildAt(i);
-            child.setTranslationX(translations[i]);
-            child.setAlpha(alphas[i]);
-            child.setScaleX(scaleXs[i]);
-            child.setScaleY(scaleYs[i]);
-        }
-        runningPageSprings.clear();
-        pageTransitionRunning = false;
-        pageHost.invalidate();
+        pageTransitions.interrupt();
     }
 }
