@@ -203,13 +203,13 @@ public final class Ui {
     }
 
     private int homeIconColor(int palette) {
-        int[] light = {0xFF00677A, 0xFF8A4E00, 0xFF6542A5, 0xFF196B43, 0xFF9B3B68};
+        int[] light = {0xFF2F5F8F, 0xFF397568, 0xFF315A9E, 0xFF4A6F86, 0xFF527664};
         int[] dark = {0xFF6ED8EA, 0xFFFFC66A, 0xFFC9ADFF, 0xFF78D9A7, 0xFFF3A0C5};
         return (nightMode ? dark : light)[safePalette(palette)];
     }
 
     private int homeIconBackground(int palette) {
-        int[] light = {0xFFD7F3F8, 0xFFFFE7C2, 0xFFECE0FF, 0xFFD9F3E3, 0xFFFFE0EC};
+        int[] light = {0xFFEAF2FF, 0xFFE4F4EF, 0xFFE3EDFA, 0xFFE8F3F4, 0xFFE7F2EA};
         int[] dark = {0xFF153C46, 0xFF493719, 0xFF372C4B, 0xFF183E2D, 0xFF48263A};
         return (nightMode ? dark : light)[safePalette(palette)];
     }

@@ -1,4 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <color name="launcher_background">#111827</color>
+    <color name="light_surface">#F7F9FC</color>
+    <color name="light_surface_container">#FFFFFF</color>
+    <color name="light_primary">#315A9E</color>
+    <color name="light_primary_container">#EAF2FF</color>
+    <color name="light_on_primary_container">#173A6B</color>
+    <color name="light_secondary">#3F7468</color>
+    <color name="light_secondary_container">#E4F4EF</color>
+    <color name="light_on_secondary_container">#214F46</color>
+    <color name="light_on_surface">#171A20</color>
+    <color name="light_on_surface_variant">#626A76</color>
+    <color name="light_outline">#AAB2BF</color>
+    <color name="light_outline_variant">#D9DEE7</color>
 </resources>
