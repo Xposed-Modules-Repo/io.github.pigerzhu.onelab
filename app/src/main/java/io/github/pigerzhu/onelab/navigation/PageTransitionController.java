@@ -1,4 +1,6 @@
-package io.github.pigerzhu.onelab;
+package io.github.pigerzhu.onelab.navigation;
+
+import io.github.pigerzhu.onelab.MainActivity;
 
 import android.animation.Animator;
 import android.animation.AnimatorListenerAdapter;
@@ -8,18 +10,18 @@ import android.view.ViewGroup;
 import android.view.animation.PathInterpolator;
 
 /** Owns OneLab's page-to-page animation so gesture takeover has one animation source. */
-final class PageTransitionController {
+public final class PageTransitionController {
     private static final long DURATION_MS = 360L;
     private static final PathInterpolator EASING =
             new PathInterpolator(0.2f, 0f, 0f, 1f);
 
     private ValueAnimator animator;
 
-    boolean isRunning() {
+    public boolean isRunning() {
         return animator != null && animator.isRunning();
     }
 
-    void animateIn(View previousPage, View nextPage, int width) {
+    public void animateIn(View previousPage, View nextPage, int width) {
         interrupt();
         nextPage.setTranslationX(width);
         nextPage.setScaleX(1f);
@@ -37,7 +39,7 @@ final class PageTransitionController {
         }, null);
     }
 
-    void animateOut(
+    public void animateOut(
             ViewGroup pageHost,
             View leavingPage,
             View restoredPage,
@@ -65,7 +67,7 @@ final class PageTransitionController {
         }, () -> pageHost.removeView(leavingPage));
     }
 
-    void interrupt() {
+    public void interrupt() {
         if (animator == null) return;
         ValueAnimator running = animator;
         animator = null;

@@ -1,4 +1,7 @@
-package io.github.pigerzhu.onelab;
+package io.github.pigerzhu.onelab.feature.window;
+
+import io.github.pigerzhu.onelab.MainActivity;
+import io.github.pigerzhu.onelab.R;
 
 import android.content.SharedPreferences;
 import android.view.Gravity;
@@ -19,7 +22,7 @@ import io.github.pigerzhu.onelab.system.CoverEdgeClient;
 import io.github.pigerzhu.onelab.ui.Ui;
 
 /** Controls the Fold cover display grip zone exposed by Samsung's TSP controller. */
-final class CoverEdgeScreen {
+public final class CoverEdgeScreen {
     private static final String PREFS = "onelab_cover_edge";
     private static final String PREF_ACTIVE = "active";
     private static final String PREF_WIDTH = "width_percent";
@@ -38,13 +41,13 @@ final class CoverEdgeScreen {
     private View rightEdgePreview;
     private boolean updatingUi;
 
-    CoverEdgeScreen(MainActivity host, Ui ui) {
+    public CoverEdgeScreen(MainActivity host, Ui ui) {
         this.host = host;
         this.ui = ui;
         this.client = new CoverEdgeClient(host);
     }
 
-    View entryCard() {
+    public View entryCard() {
         MaterialCardView card = ui.card();
         card.setClickable(true);
         card.setFocusable(true);
@@ -64,7 +67,7 @@ final class CoverEdgeScreen {
     }
 
     private void showPage() {
-        host.nestedBackAction = () -> host.showExperimentsPage(true);
+        host.setNestedBackAction(() -> host.showExperimentsPage(true));
         LinearLayout root = host.beginSubPage(
                 "外屏侧边防误触", "单独调整折叠状态下外屏两侧的拒触区域。", 1);
         root.addView(controlCard());
@@ -261,7 +264,7 @@ final class CoverEdgeScreen {
         rightEdgePreview = null;
     }
 
-    void onDestroy() {
+    public void onDestroy() {
         hideEdgePreview();
     }
 }

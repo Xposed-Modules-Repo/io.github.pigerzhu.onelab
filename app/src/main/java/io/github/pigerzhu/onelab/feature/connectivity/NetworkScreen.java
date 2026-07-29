@@ -1,4 +1,6 @@
-package io.github.pigerzhu.onelab;
+package io.github.pigerzhu.onelab.feature.connectivity;
+
+import io.github.pigerzhu.onelab.MainActivity;
 
 import static io.github.pigerzhu.onelab.contract.SettingsKeys.DEFAULT_CAPTIVE_DELAY_MS;
 import static io.github.pigerzhu.onelab.contract.SettingsKeys.KEY_CAPTIVE_DELAY_MS;
@@ -17,7 +19,7 @@ import com.google.android.material.slider.Slider;
 import io.github.pigerzhu.onelab.system.SettingsStore;
 import io.github.pigerzhu.onelab.ui.Ui;
 
-final class NetworkScreen {
+public final class NetworkScreen {
     private static final int DELAY_UNLIMITED_STEP = 25;
     private static final int DELAY_MAX_SECONDS = 120;
 
@@ -26,13 +28,13 @@ final class NetworkScreen {
     private final SettingsStore settings;
     private TextView delayValue;
 
-    NetworkScreen(MainActivity host, Ui ui, SettingsStore settings) {
+    public NetworkScreen(MainActivity host, Ui ui, SettingsStore settings) {
         this.host = host;
         this.ui = ui;
         this.settings = settings;
     }
 
-    View card() {
+    public View card() {
         MaterialCardView card = ui.card();
         LinearLayout body = ui.cardBody();
         card.addView(body);

@@ -1,4 +1,7 @@
-package io.github.pigerzhu.onelab;
+package io.github.pigerzhu.onelab.navigation;
+
+import io.github.pigerzhu.onelab.MainActivity;
+import io.github.pigerzhu.onelab.R;
 
 import android.content.Context;
 import android.content.res.ColorStateList;
@@ -20,7 +23,7 @@ import java.util.function.Consumer;
 import io.github.pigerzhu.onelab.ui.Ui;
 
 /** Fixed app-picker toolbar, including its transient search mode. */
-final class AppListToolbar {
+public final class AppListToolbar {
     static final int SORT_NAME = 0;
     static final int SORT_RECENTLY_INSTALLED = 1;
     static final int SORT_RECENTLY_UPDATED = 2;
@@ -46,7 +49,7 @@ final class AppListToolbar {
     private boolean descending;
     private boolean searching;
 
-    AppListToolbar(
+    public AppListToolbar(
             MainActivity host,
             Ui ui,
             String title,
@@ -104,7 +107,7 @@ final class AppListToolbar {
             if (searching) {
                 closeSearch();
             } else if (parentBackAction != null) {
-                host.nestedBackAction = null;
+                host.setNestedBackAction(null);
                 parentBackAction.run();
             }
         });
@@ -139,7 +142,7 @@ final class AppListToolbar {
         moreButton.setVisibility(View.GONE);
         searchInput.setVisibility(View.VISIBLE);
         closeSearchButton.setVisibility(View.VISIBLE);
-        host.nestedBackAction = this::closeSearch;
+        host.setNestedBackAction(this::closeSearch);
         searchInput.requestFocus();
         keyboard().showSoftInput(searchInput, InputMethodManager.SHOW_IMPLICIT);
     }
@@ -154,7 +157,7 @@ final class AppListToolbar {
         titleView.setVisibility(View.VISIBLE);
         searchButton.setVisibility(View.VISIBLE);
         moreButton.setVisibility(View.VISIBLE);
-        host.nestedBackAction = parentBackAction;
+        host.setNestedBackAction(parentBackAction);
         keyboard().hideSoftInputFromWindow(searchInput.getWindowToken(), 0);
     }
 

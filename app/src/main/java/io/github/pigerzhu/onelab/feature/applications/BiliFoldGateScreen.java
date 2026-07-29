@@ -1,6 +1,8 @@
-package io.github.pigerzhu.onelab;
+package io.github.pigerzhu.onelab.feature.applications;
 
-import static io.github.pigerzhu.onelab.contract.SettingsKeys.KEY_ENABLE_QQ_FOLD_LAYOUT;
+import io.github.pigerzhu.onelab.MainActivity;
+
+import static io.github.pigerzhu.onelab.contract.SettingsKeys.KEY_ENABLE_BILI_FOLD_GATE;
 
 import android.view.Gravity;
 import android.view.View;
@@ -13,43 +15,38 @@ import com.google.android.material.materialswitch.MaterialSwitch;
 import io.github.pigerzhu.onelab.system.SettingsStore;
 import io.github.pigerzhu.onelab.ui.Ui;
 
-final class QqFoldLayoutScreen {
+public final class BiliFoldGateScreen {
     private final MainActivity host;
     private final Ui ui;
     private final SettingsStore settings;
 
-    QqFoldLayoutScreen(MainActivity host, Ui ui, SettingsStore settings) {
+    public BiliFoldGateScreen(MainActivity host, Ui ui, SettingsStore settings) {
         this.host = host;
         this.ui = ui;
         this.settings = settings;
     }
 
-    View card() {
+    public View card() {
         MaterialCardView card = ui.card();
         LinearLayout body = ui.cardBody();
         card.addView(body);
 
-        LinearLayout row = new LinearLayout(host);
-        row.setGravity(Gravity.CENTER_VERTICAL);
-        row.setOrientation(LinearLayout.HORIZONTAL);
-        body.addView(row, ui.matchWrap());
+        LinearLayout header = new LinearLayout(host);
+        header.setGravity(Gravity.CENTER_VERTICAL);
+        header.setOrientation(LinearLayout.HORIZONTAL);
+        body.addView(header, ui.matchWrap());
 
         LinearLayout copy = new LinearLayout(host);
         copy.setOrientation(LinearLayout.VERTICAL);
-        row.addView(copy, new LinearLayout.LayoutParams(
+        header.addView(copy, new LinearLayout.LayoutParams(
                 0, ViewGroup.LayoutParams.WRAP_CONTENT, 1));
-        copy.addView(ui.text("QQ 折叠屏适配", 20, true, ui.colorOnSurface));
-        copy.addView(ui.text(
-                "修正推送伪装导致的大屏识别异常",
-                14,
-                false,
-                ui.colorOnSurfaceVariant));
+        copy.addView(ui.text("B 站原生大屏适配", 20, true, ui.colorOnSurface));
 
         MaterialSwitch toggle = new MaterialSwitch(host);
-        toggle.setChecked("1".equals(settings.getGlobal(KEY_ENABLE_QQ_FOLD_LAYOUT, "0")));
+        toggle.setChecked("1".equals(settings.getGlobal(KEY_ENABLE_BILI_FOLD_GATE, "0")));
         toggle.setOnCheckedChangeListener((button, enabled) ->
-                settings.setGlobal(KEY_ENABLE_QQ_FOLD_LAYOUT, enabled ? "1" : "0"));
-        row.addView(toggle);
+                settings.setGlobal(KEY_ENABLE_BILI_FOLD_GATE, enabled ? "1" : "0"));
+        header.addView(toggle);
 
         return card;
     }

@@ -1,4 +1,6 @@
-package io.github.pigerzhu.onelab;
+package io.github.pigerzhu.onelab.feature.window;
+
+import io.github.pigerzhu.onelab.MainActivity;
 
 import android.app.Activity;
 import android.content.Context;
@@ -38,7 +40,7 @@ import java.util.concurrent.Executor;
  * a {@link WindowAreaSessionPresenter} whose context targets the cover display; whatever view we set
  * on it shows there. We draw a ticking clock as the default demo content.
  */
-final class CoverDisplayPresenter {
+public final class CoverDisplayPresenter {
     private static final String TAG = "OneLab";
 
     interface StatusListener {
@@ -66,7 +68,7 @@ final class CoverDisplayPresenter {
     private String customText = "";
     private Uri imageUri;
 
-    CoverDisplayPresenter(Activity activity) {
+    public CoverDisplayPresenter(Activity activity) {
         this.activity = activity;
         this.executor = activity.getMainExecutor();
         this.controller = WindowAreaController.getOrCreate();

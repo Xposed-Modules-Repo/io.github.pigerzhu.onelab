@@ -1,4 +1,6 @@
-package io.github.pigerzhu.onelab;
+package io.github.pigerzhu.onelab.feature.experiment;
+
+import io.github.pigerzhu.onelab.MainActivity;
 
 import static io.github.pigerzhu.onelab.contract.SettingsKeys.KEY_ENABLE_GALLERY_DEV_LABS;
 
@@ -13,18 +15,18 @@ import com.google.android.material.materialswitch.MaterialSwitch;
 import io.github.pigerzhu.onelab.system.SettingsStore;
 import io.github.pigerzhu.onelab.ui.Ui;
 
-final class GalleryLabsScreen {
+public final class GalleryLabsScreen {
     private final MainActivity host;
     private final Ui ui;
     private final SettingsStore settings;
 
-    GalleryLabsScreen(MainActivity host, Ui ui, SettingsStore settings) {
+    public GalleryLabsScreen(MainActivity host, Ui ui, SettingsStore settings) {
         this.host = host;
         this.ui = ui;
         this.settings = settings;
     }
 
-    View card() {
+    public View card() {
         MaterialCardView card = ui.card();
         LinearLayout body = ui.cardBody();
         card.addView(body);

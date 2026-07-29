@@ -1,4 +1,7 @@
-package io.github.pigerzhu.onelab;
+package io.github.pigerzhu.onelab.feature.window;
+
+import io.github.pigerzhu.onelab.MainActivity;
+import io.github.pigerzhu.onelab.R;
 
 import android.app.Activity;
 import android.app.AlertDialog;
@@ -26,7 +29,7 @@ import io.github.pigerzhu.onelab.system.DeviceStateClient;
 import io.github.pigerzhu.onelab.ui.ChoiceGroup;
 import io.github.pigerzhu.onelab.ui.Ui;
 
-final class CoverScreen {
+public final class CoverScreen {
     private static final int REQ_PICK_COVER_IMAGE = 4201;
     private static final String PREF_OUTER_SYSTEM_ENABLED = "outer_system_enabled";
     private static final String PREF_OUTER_SYSTEM_BOOT_COUNT = "outer_system_boot_count";
@@ -37,12 +40,12 @@ final class CoverScreen {
     private final ExecutorService deviceStateExecutor = Executors.newSingleThreadExecutor();
     private CoverDisplayPresenter coverPresenter;
 
-    CoverScreen(MainActivity host, Ui ui) {
+    public CoverScreen(MainActivity host, Ui ui) {
         this.host = host;
         this.ui = ui;
     }
 
-    View outerSystemCard() {
+    public View outerSystemCard() {
         MaterialCardView card = ui.card();
         LinearLayout body = ui.cardBody();
         card.addView(body);
@@ -141,7 +144,7 @@ final class CoverScreen {
                 host.getContentResolver(), Settings.Global.BOOT_COUNT, -1);
     }
 
-    View card() {
+    public View card() {
         MaterialCardView card = ui.card();
         LinearLayout body = ui.cardBody();
         card.addView(body);
@@ -263,7 +266,7 @@ final class CoverScreen {
         }
     }
 
-    void onActivityResult(int requestCode, int resultCode, Intent data) {
+    public void onActivityResult(int requestCode, int resultCode, Intent data) {
         if (requestCode != REQ_PICK_COVER_IMAGE || resultCode != Activity.RESULT_OK
                 || data == null || data.getData() == null) {
             return;
@@ -281,7 +284,7 @@ final class CoverScreen {
         }
     }
 
-    void onDestroy() {
+    public void onDestroy() {
         deviceStateExecutor.shutdownNow();
         if (coverPresenter != null) {
             coverPresenter.stopListening();

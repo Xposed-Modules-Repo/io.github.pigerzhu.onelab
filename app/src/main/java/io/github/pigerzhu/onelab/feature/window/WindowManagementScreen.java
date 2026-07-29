@@ -1,4 +1,6 @@
-package io.github.pigerzhu.onelab;
+package io.github.pigerzhu.onelab.feature.window;
+
+import io.github.pigerzhu.onelab.MainActivity;
 
 import android.view.Gravity;
 import android.view.View;
@@ -14,7 +16,7 @@ import org.json.JSONObject;
 import io.github.pigerzhu.onelab.system.SettingsStore;
 import io.github.pigerzhu.onelab.ui.Ui;
 
-final class WindowManagementScreen {
+public final class WindowManagementScreen {
     private static final String KEY_MULTISTAR_REPOSITORY = "multistar_setting_json_repository";
     private static final String KEY_MULTISTAR_ALL_REPOSITORY = "multistar_all_setting_repository";
     private static final String KEY_PERSIST_FREEFORM_BOUNDS = "persistFreeformBounds";
@@ -23,13 +25,13 @@ final class WindowManagementScreen {
     private final Ui ui;
     private final SettingsStore settings;
 
-    WindowManagementScreen(MainActivity host, Ui ui, SettingsStore settings) {
+    public WindowManagementScreen(MainActivity host, Ui ui, SettingsStore settings) {
         this.host = host;
         this.ui = ui;
         this.settings = settings;
     }
 
-    View persistFreeformBoundsCard() {
+    public View persistFreeformBoundsCard() {
         MaterialCardView card = ui.card();
         LinearLayout body = ui.cardBody();
         card.addView(body);

@@ -1,4 +1,6 @@
-package io.github.pigerzhu.onelab;
+package io.github.pigerzhu.onelab.feature.performance;
+
+import io.github.pigerzhu.onelab.MainActivity;
 
 import android.content.Intent;
 import android.view.Gravity;
@@ -20,7 +22,7 @@ import io.github.pigerzhu.onelab.system.SettingsStore;
 import io.github.pigerzhu.onelab.ui.ChoiceGroup;
 import io.github.pigerzhu.onelab.ui.Ui;
 
-final class ProcessingSpeedScreen {
+public final class ProcessingSpeedScreen {
     private static final String KEY_ENHANCED_PROCESSING = "enhanced_processing";
     private final MainActivity host;
     private final Ui ui;
@@ -29,14 +31,14 @@ final class ProcessingSpeedScreen {
     private final ExecutorService executor = Executors.newSingleThreadExecutor();
     private MaterialSwitch tileSwitch;
 
-    ProcessingSpeedScreen(MainActivity host, Ui ui, SettingsStore settings) {
+    public ProcessingSpeedScreen(MainActivity host, Ui ui, SettingsStore settings) {
         this.host = host;
         this.ui = ui;
         this.settings = settings;
         this.client = new ProcessingSpeedClient(host);
     }
 
-    View card() {
+    public View card() {
         MaterialCardView card = ui.card();
         LinearLayout body = ui.cardBody();
         card.addView(body);
@@ -133,7 +135,7 @@ final class ProcessingSpeedScreen {
         });
     }
 
-    void onDestroy() {
+    public void onDestroy() {
         executor.shutdownNow();
     }
 }

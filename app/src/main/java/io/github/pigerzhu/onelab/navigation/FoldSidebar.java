@@ -1,4 +1,7 @@
-package io.github.pigerzhu.onelab;
+package io.github.pigerzhu.onelab.navigation;
+
+import io.github.pigerzhu.onelab.MainActivity;
+import io.github.pigerzhu.onelab.R;
 
 import android.animation.Animator;
 import android.animation.AnimatorListenerAdapter;
@@ -24,10 +27,10 @@ import com.google.android.material.card.MaterialCardView;
 import io.github.pigerzhu.onelab.ui.Ui;
 
 /** Samsung-style navigation rail used only on the unfolded large display. */
-final class FoldSidebar {
+public final class FoldSidebar {
     private static final PathInterpolator WIDTH_EASING =
             new PathInterpolator(0.2f, 0f, 0f, 1f);
-    interface Listener {
+    public interface Listener {
         void onSectionSelected(int section);
 
         void onAppearanceSelected();
@@ -45,7 +48,7 @@ final class FoldSidebar {
     private ValueAnimator widthAnimator;
     private int selectedSection;
 
-    FoldSidebar(MainActivity host, Ui ui, int selectedSection, Listener listener) {
+    public FoldSidebar(MainActivity host, Ui ui, int selectedSection, Listener listener) {
         this.host = host;
         this.ui = ui;
         this.listener = listener;
@@ -68,28 +71,28 @@ final class FoldSidebar {
         rebuild();
     }
 
-    View view() {
+    public View view() {
         return card;
     }
 
-    void setSelectedSection(int section) {
+    public void setSelectedSection(int section) {
         selectedSection = section;
         rebuild();
     }
 
-    void expand() {
+    public void expand() {
         setExpanded(true, true);
     }
 
-    void collapse() {
+    public void collapse() {
         setExpanded(false, true);
     }
 
-    boolean isExpanded() {
+    public boolean isExpanded() {
         return targetExpanded;
     }
 
-    void setExpandedImmediately(boolean value) {
+    public void setExpandedImmediately(boolean value) {
         setExpanded(value, false);
     }
 

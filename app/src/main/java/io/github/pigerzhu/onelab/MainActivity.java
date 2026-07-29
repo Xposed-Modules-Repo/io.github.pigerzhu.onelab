@@ -20,6 +20,29 @@ import com.google.android.material.color.DynamicColors;
 
 import java.util.ArrayDeque;
 
+import io.github.pigerzhu.onelab.feature.applications.BiliFoldGateScreen;
+import io.github.pigerzhu.onelab.feature.applications.CtripSplitRulesScreen;
+import io.github.pigerzhu.onelab.feature.applications.MeituanSplitRulesScreen;
+import io.github.pigerzhu.onelab.feature.applications.QqFoldLayoutScreen;
+import io.github.pigerzhu.onelab.feature.applications.TongchengSplitRulesScreen;
+import io.github.pigerzhu.onelab.feature.applications.UmetripSplitRulesScreen;
+import io.github.pigerzhu.onelab.feature.applications.XhsFoldVideoScreen;
+import io.github.pigerzhu.onelab.feature.applications.XiaomiShopFoldScreen;
+import io.github.pigerzhu.onelab.feature.connectivity.NetworkScreen;
+import io.github.pigerzhu.onelab.feature.diagnostics.DiagnosticsScreen;
+import io.github.pigerzhu.onelab.feature.experiment.GalleryLabsScreen;
+import io.github.pigerzhu.onelab.feature.performance.GameHeatScreen;
+import io.github.pigerzhu.onelab.feature.performance.ProcessingSpeedScreen;
+import io.github.pigerzhu.onelab.feature.performance.ThermalScreen;
+import io.github.pigerzhu.onelab.feature.window.AspectRatioScreen;
+import io.github.pigerzhu.onelab.feature.window.CoverEdgeScreen;
+import io.github.pigerzhu.onelab.feature.window.CoverScreen;
+import io.github.pigerzhu.onelab.feature.window.RefreshRateScreen;
+import io.github.pigerzhu.onelab.feature.window.WindowManagementScreen;
+import io.github.pigerzhu.onelab.navigation.AppListPage;
+import io.github.pigerzhu.onelab.navigation.FoldSidebar;
+import io.github.pigerzhu.onelab.navigation.PageTransitionController;
+import io.github.pigerzhu.onelab.navigation.PredictiveBackController;
 import io.github.pigerzhu.onelab.system.SettingsStore;
 import io.github.pigerzhu.onelab.ui.AppTheme;
 import io.github.pigerzhu.onelab.ui.ChoiceGroup;
@@ -50,7 +73,7 @@ public class MainActivity extends Activity {
     private RefreshRateScreen refreshRateScreen;
     private DiagnosticsScreen diagnosticsScreen;
     boolean showingHomePage = true;
-    Runnable nestedBackAction;
+    private Runnable nestedBackAction;
     private long lastBackPressMs;
     private FrameLayout pageHost;
     private View currentPageView;
@@ -298,7 +321,7 @@ public class MainActivity extends Activity {
         showSystemUiPage(false);
     }
 
-    void showSystemUiPage(boolean animateBack) {
+    public void showSystemUiPage(boolean animateBack) {
         markTopLevel(Ui.HOME_SYSTEM);
         nestedBackAction = null;
         LinearLayout root = beginSubPage(
@@ -337,7 +360,7 @@ public class MainActivity extends Activity {
         showExperimentsPage(false);
     }
 
-    void showExperimentsPage(boolean animateBack) {
+    public void showExperimentsPage(boolean animateBack) {
         markTopLevel(Ui.HOME_EXPERIMENTS);
         nestedBackAction = null;
         LinearLayout root = beginSubPage(
@@ -462,7 +485,7 @@ public class MainActivity extends Activity {
         return beginSubPage(title, subtitle, 1);
     }
 
-    LinearLayout beginSubPage(String title, String subtitle, int animationDirection) {
+    public LinearLayout beginSubPage(String title, String subtitle, int animationDirection) {
         showingHomePage = false;
         LinearLayout root = beginPage(animationDirection);
         root.addView(ui.text(title, 32, true, ui.colorOnSurface));
@@ -471,7 +494,7 @@ public class MainActivity extends Activity {
         return root;
     }
 
-    void switchPage(View nextPage, int direction) {
+    public void switchPage(View nextPage, int direction) {
         View previousPage = currentPageView;
         predictiveParentPreviewEnabled = true;
 
@@ -510,8 +533,20 @@ public class MainActivity extends Activity {
         }
     }
 
-    void setPredictiveParentPreviewEnabled(boolean enabled) {
+    public void setPredictiveParentPreviewEnabled(boolean enabled) {
         predictiveParentPreviewEnabled = enabled;
+    }
+
+    public Runnable getNestedBackAction() {
+        return nestedBackAction;
+    }
+
+    public void setNestedBackAction(Runnable action) {
+        nestedBackAction = action;
+    }
+
+    public void setShowingHomePage(boolean showing) {
+        showingHomePage = showing;
     }
 
     private FrameLayout.LayoutParams pageParams() {

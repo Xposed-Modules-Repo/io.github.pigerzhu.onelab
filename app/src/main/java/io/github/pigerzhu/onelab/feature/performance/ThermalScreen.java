@@ -1,4 +1,6 @@
-package io.github.pigerzhu.onelab;
+package io.github.pigerzhu.onelab.feature.performance;
+
+import io.github.pigerzhu.onelab.MainActivity;
 
 import static io.github.pigerzhu.onelab.contract.SettingsKeys.DEFAULT_SDHMS_GPU_MIN_CAP_MHZ;
 import static io.github.pigerzhu.onelab.contract.SettingsKeys.KEY_DISABLE_SDHMS_BRIGHTNESS_LIMIT;
@@ -27,7 +29,7 @@ import io.github.pigerzhu.onelab.system.SdhmsClient;
 import io.github.pigerzhu.onelab.system.SettingsStore;
 import io.github.pigerzhu.onelab.ui.Ui;
 
-final class ThermalScreen {
+public final class ThermalScreen {
 
     private static final String KEY_LAST_SDHMS_THERMAL_DELTA =
             "onelab_last_sdhms_thermal_delta";
@@ -59,14 +61,14 @@ final class ThermalScreen {
     private Slider thermalDeltaSlider;
     private Slider sdhmsGpuMinCapSlider;
 
-    ThermalScreen(MainActivity host, Ui ui, SettingsStore settings) {
+    public ThermalScreen(MainActivity host, Ui ui, SettingsStore settings) {
         this.host = host;
         this.ui = ui;
         this.settings = settings;
     }
 
     /** Entry card for the Experiments page. Tapping opens {@link #showPage()}. */
-    View entryCard() {
+    public View entryCard() {
         MaterialCardView card = ui.card();
         card.setClickable(true);
         card.setFocusable(true);
@@ -88,7 +90,7 @@ final class ThermalScreen {
 
     /** Navigate to the SDHMS/ThermalGuardian sub-page. */
     void showPage() {
-        host.nestedBackAction = () -> host.showExperimentsPage(true);
+        host.setNestedBackAction(() -> host.showExperimentsPage(true));
         LinearLayout root = host.beginSubPage(
                 "SDHMS 实验温控",
                 "ThermalGuardian delta、thermal flag、亮度/蜂窝旁路。",
@@ -99,7 +101,7 @@ final class ThermalScreen {
     }
 
     /** Master-enable card. Also shown on the Performance page via host. */
-    View sdhmsThermalMasterCard() {
+    public View sdhmsThermalMasterCard() {
         MaterialCardView card = ui.card();
         LinearLayout body = ui.cardBody();
         card.addView(body);
@@ -116,7 +118,7 @@ final class ThermalScreen {
     }
 
     /** SIOP perf-cap bypass card. Also shown on the Performance page via host. */
-    View sdhmsHiddenThermalCard() {
+    public View sdhmsHiddenThermalCard() {
         sdhmsBrightnessLimitSwitch = null;
         sdhmsCpMitigationSwitch = null;
         sdhmsMultiWindowThermalSwitch = null;

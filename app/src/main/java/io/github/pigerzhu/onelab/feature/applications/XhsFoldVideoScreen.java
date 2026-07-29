@@ -1,4 +1,6 @@
-package io.github.pigerzhu.onelab;
+package io.github.pigerzhu.onelab.feature.applications;
+
+import io.github.pigerzhu.onelab.MainActivity;
 
 import static io.github.pigerzhu.onelab.contract.SettingsKeys.KEY_ENABLE_XHS_FOLD_HOME;
 import static io.github.pigerzhu.onelab.contract.SettingsKeys.KEY_ENABLE_XHS_FOLD_VIDEO;
@@ -12,18 +14,18 @@ import com.google.android.material.materialswitch.MaterialSwitch;
 import io.github.pigerzhu.onelab.system.SettingsStore;
 import io.github.pigerzhu.onelab.ui.Ui;
 
-final class XhsFoldVideoScreen {
+public final class XhsFoldVideoScreen {
     private final MainActivity host;
     private final Ui ui;
     private final SettingsStore settings;
 
-    XhsFoldVideoScreen(MainActivity host, Ui ui, SettingsStore settings) {
+    public XhsFoldVideoScreen(MainActivity host, Ui ui, SettingsStore settings) {
         this.host = host;
         this.ui = ui;
         this.settings = settings;
     }
 
-    View card() {
+    public View card() {
         MaterialCardView card = ui.card();
         LinearLayout body = ui.cardBody();
         card.addView(body);

@@ -1,4 +1,7 @@
-package io.github.pigerzhu.onelab;
+package io.github.pigerzhu.onelab.feature.window;
+
+import io.github.pigerzhu.onelab.MainActivity;
+import io.github.pigerzhu.onelab.navigation.AppListPage;
 
 import static io.github.pigerzhu.onelab.contract.SettingsKeys.KEY_ASPECT_RATIO_OVERRIDES;
 
@@ -23,21 +26,21 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
-final class AspectRatioScreen {
+public final class AspectRatioScreen {
 
     private final MainActivity host;
     private final Ui ui;
     private final SettingsStore settings;
     private final AppListPage appList;
 
-    AspectRatioScreen(MainActivity host, Ui ui, SettingsStore settings, AppListPage appList) {
+    public AspectRatioScreen(MainActivity host, Ui ui, SettingsStore settings, AppListPage appList) {
         this.host = host;
         this.ui = ui;
         this.settings = settings;
         this.appList = appList;
     }
 
-    View entryCard() {
+    public View entryCard() {
         MaterialCardView card = ui.card();
         card.setClickable(true);
         card.setFocusable(true);
@@ -60,7 +63,7 @@ final class AspectRatioScreen {
     }
 
     void showPage() {
-        host.nestedBackAction = () -> host.showSystemUiPage(true);
+        host.setNestedBackAction(() -> host.showSystemUiPage(true));
         Map<String, AspectOverride> overrides = aspectRatioOverrides();
         appList.show(
                 "",

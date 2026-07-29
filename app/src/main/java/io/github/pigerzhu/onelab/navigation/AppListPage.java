@@ -1,4 +1,7 @@
-package io.github.pigerzhu.onelab;
+package io.github.pigerzhu.onelab.navigation;
+
+import io.github.pigerzhu.onelab.MainActivity;
+import io.github.pigerzhu.onelab.R;
 
 import android.content.Context;
 import android.content.SharedPreferences;
@@ -33,7 +36,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Set;
 
-final class AppListPage {
+public final class AppListPage {
     private static final String PREFS = "app_list";
     private static final String PREF_SORT = "sort_mode";
     private static final String PREF_DESCENDING = "sort_descending";
@@ -42,7 +45,7 @@ final class AppListPage {
     private final Ui ui;
     private List<AppEntry> cachedUserApps;
 
-    AppListPage(MainActivity host, Ui ui) {
+    public AppListPage(MainActivity host, Ui ui) {
         this.host = host;
         this.ui = ui;
     }
@@ -90,7 +93,7 @@ final class AppListPage {
         }
     }
 
-    void show(
+    public void show(
             String title,
             String subtitle,
             AppStatusProvider statusProvider,
@@ -99,7 +102,7 @@ final class AppListPage {
         show(title, subtitle, statusProvider, listener, null);
     }
 
-    void show(
+    public void show(
             String title,
             String subtitle,
             AppStatusProvider statusProvider,
@@ -109,7 +112,7 @@ final class AppListPage {
         show(title, subtitle, statusProvider, listener, priority, null);
     }
 
-    void show(
+    public void show(
             String title,
             String subtitle,
             AppStatusProvider statusProvider,
@@ -117,8 +120,8 @@ final class AppListPage {
             AppPriority priority,
             BatchAction batchAction
     ) {
-        host.showingHomePage = false;
-        Runnable parentBackAction = host.nestedBackAction;
+        host.setShowingHomePage(false);
+        Runnable parentBackAction = host.getNestedBackAction();
         SelectionState selection = new SelectionState();
         AppListAdapter[] adapter = new AppListAdapter[1];
         String[] query = {""};

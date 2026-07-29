@@ -1,4 +1,6 @@
-package io.github.pigerzhu.onelab;
+package io.github.pigerzhu.onelab.navigation;
+
+import io.github.pigerzhu.onelab.MainActivity;
 
 import android.app.Activity;
 import android.os.Build;
@@ -13,7 +15,7 @@ import java.util.function.BooleanSupplier;
 import java.util.function.Supplier;
 
 /** Bridges Android's predictive-back progress into OneLab's custom page navigation. */
-final class PredictiveBackController {
+public final class PredictiveBackController {
     private static final long CANCEL_ANIMATION_MS = 220L;
     private static final PathInterpolator CANCEL_EASING =
             new PathInterpolator(0.2f, 0f, 0f, 1f);
@@ -33,7 +35,7 @@ final class PredictiveBackController {
     private float previewStartTranslation;
     private float previewStartAlpha = 0.92f;
 
-    static PredictiveBackController register(
+    public static PredictiveBackController register(
             Activity activity,
             Supplier<View> currentView,
             Supplier<View> previewView,
@@ -72,7 +74,7 @@ final class PredictiveBackController {
                 OnBackInvokedDispatcher.PRIORITY_DEFAULT, callback);
     }
 
-    void unregister() {
+    public void unregister() {
         activity.getOnBackInvokedDispatcher().unregisterOnBackInvokedCallback(callback);
     }
 

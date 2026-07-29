@@ -1,6 +1,8 @@
-package io.github.pigerzhu.onelab;
+package io.github.pigerzhu.onelab.feature.applications;
 
-import static io.github.pigerzhu.onelab.contract.SettingsKeys.KEY_ENABLE_XIAOMI_SHOP_FOLD;
+import io.github.pigerzhu.onelab.MainActivity;
+
+import static io.github.pigerzhu.onelab.contract.SettingsKeys.KEY_ENABLE_MEITUAN_SPLIT_RULES;
 
 import android.view.Gravity;
 import android.view.View;
@@ -13,18 +15,18 @@ import com.google.android.material.materialswitch.MaterialSwitch;
 import io.github.pigerzhu.onelab.system.SettingsStore;
 import io.github.pigerzhu.onelab.ui.Ui;
 
-final class XiaomiShopFoldScreen {
+public final class MeituanSplitRulesScreen {
     private final MainActivity host;
     private final Ui ui;
     private final SettingsStore settings;
 
-    XiaomiShopFoldScreen(MainActivity host, Ui ui, SettingsStore settings) {
+    public MeituanSplitRulesScreen(MainActivity host, Ui ui, SettingsStore settings) {
         this.host = host;
         this.ui = ui;
         this.settings = settings;
     }
 
-    View card() {
+    public View card() {
         MaterialCardView card = ui.card();
         LinearLayout body = ui.cardBody();
         card.addView(body);
@@ -39,19 +41,19 @@ final class XiaomiShopFoldScreen {
         row.addView(copy, new LinearLayout.LayoutParams(
                 0, ViewGroup.LayoutParams.WRAP_CONTENT, 1));
         copy.addView(ui.text(
-                "小米商城折叠屏适配", 20, true, ui.colorOnSurface));
+                "美团分屏视图", 20, true, ui.colorOnSurface));
         copy.addView(ui.text(
-                "启用应用自带的折叠屏分栏",
+                "在“高级功能 - 实验室 - 应用程序分屏视图”列表中启用以生效",
                 14,
                 false,
                 ui.colorOnSurfaceVariant));
 
         MaterialSwitch toggle = new MaterialSwitch(host);
         toggle.setChecked("1".equals(
-                settings.getGlobal(KEY_ENABLE_XIAOMI_SHOP_FOLD, "0")));
+                settings.getGlobal(KEY_ENABLE_MEITUAN_SPLIT_RULES, "0")));
         toggle.setOnCheckedChangeListener((button, enabled) ->
                 settings.setGlobal(
-                        KEY_ENABLE_XIAOMI_SHOP_FOLD, enabled ? "1" : "0"));
+                        KEY_ENABLE_MEITUAN_SPLIT_RULES, enabled ? "1" : "0"));
         row.addView(toggle);
         return card;
     }

@@ -1,4 +1,7 @@
-package io.github.pigerzhu.onelab;
+package io.github.pigerzhu.onelab.feature.window;
+
+import io.github.pigerzhu.onelab.MainActivity;
+import io.github.pigerzhu.onelab.navigation.AppListPage;
 
 import static io.github.pigerzhu.onelab.contract.SettingsKeys.KEY_REFRESH_RATE_OVERRIDES;
 
@@ -27,7 +30,7 @@ import io.github.pigerzhu.onelab.ui.ChoiceGroup;
 import io.github.pigerzhu.onelab.ui.Ui;
 
 /** UI and persistence for the per-app system_server refresh-rate hook. */
-final class RefreshRateScreen {
+public final class RefreshRateScreen {
     private static final int MODE_HIGH_REFRESH_BYPASS = 1;
     private static final int MODE_FIXED = 2;
     private static final int MODE_RANGE = 3;
@@ -37,14 +40,14 @@ final class RefreshRateScreen {
     private final SettingsStore settings;
     private final AppListPage appList;
 
-    RefreshRateScreen(MainActivity host, Ui ui, SettingsStore settings, AppListPage appList) {
+    public RefreshRateScreen(MainActivity host, Ui ui, SettingsStore settings, AppListPage appList) {
         this.host = host;
         this.ui = ui;
         this.settings = settings;
         this.appList = appList;
     }
 
-    View entryCard() {
+    public View entryCard() {
         MaterialCardView card = ui.card();
         card.setClickable(true);
         card.setFocusable(true);
@@ -67,7 +70,7 @@ final class RefreshRateScreen {
     }
 
     void showPage() {
-        host.nestedBackAction = () -> host.showSystemUiPage(true);
+        host.setNestedBackAction(() -> host.showSystemUiPage(true));
         Map<String, RefreshOverride> overrides = refreshOverrides();
         appList.show(
                 "",

@@ -1,4 +1,6 @@
-package io.github.pigerzhu.onelab;
+package io.github.pigerzhu.onelab.feature.performance;
+
+import io.github.pigerzhu.onelab.MainActivity;
 
 import android.app.AlertDialog;
 import android.text.InputType;
@@ -21,7 +23,7 @@ import io.github.pigerzhu.onelab.system.GosClient;
 import io.github.pigerzhu.onelab.system.SettingsStore;
 import io.github.pigerzhu.onelab.ui.Ui;
 
-final class GameHeatScreen {
+public final class GameHeatScreen {
 
     private static final String KEY_ALLOW_MORE_HEAT_VALUE = "allow_more_heat_value";
     private static final int GAME_HEAT_MAX_VALUE = 60;
@@ -42,14 +44,14 @@ final class GameHeatScreen {
     private EditText gamePackageInput;
     private int eachGameHeatValue;
 
-    GameHeatScreen(MainActivity host, Ui ui, SettingsStore settings) {
+    public GameHeatScreen(MainActivity host, Ui ui, SettingsStore settings) {
         this.host = host;
         this.ui = ui;
         this.settings = settings;
     }
 
     /** Entry card for the Experiments page. Tapping opens {@link #showPage()}. */
-    View entryCard() {
+    public View entryCard() {
         MaterialCardView card = ui.card();
         card.setClickable(true);
         card.setFocusable(true);
@@ -71,7 +73,7 @@ final class GameHeatScreen {
 
     /** Navigate to the Game Heat sub-page. */
     void showPage() {
-        host.nestedBackAction = () -> host.showExperimentsPage(true);
+        host.setNestedBackAction(() -> host.showExperimentsPage(true));
         LinearLayout root = host.beginSubPage("游戏热预算", "全局和单游戏 allow_more_heat_value。", 1);
         root.addView(gameHeatBudgetCard());
         root.addView(eachGamePolicyCard());

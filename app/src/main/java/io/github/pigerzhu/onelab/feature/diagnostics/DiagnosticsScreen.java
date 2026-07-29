@@ -1,4 +1,6 @@
-package io.github.pigerzhu.onelab;
+package io.github.pigerzhu.onelab.feature.diagnostics;
+
+import io.github.pigerzhu.onelab.MainActivity;
 
 import android.content.ClipData;
 import android.content.Intent;
@@ -17,17 +19,17 @@ import java.util.concurrent.Executors;
 import io.github.pigerzhu.onelab.diagnostics.DiagnosticReport;
 import io.github.pigerzhu.onelab.ui.Ui;
 
-final class DiagnosticsScreen {
+public final class DiagnosticsScreen {
     private final MainActivity host;
     private final Ui ui;
     private final ExecutorService executor = Executors.newSingleThreadExecutor();
 
-    DiagnosticsScreen(MainActivity host, Ui ui) {
+    public DiagnosticsScreen(MainActivity host, Ui ui) {
         this.host = host;
         this.ui = ui;
     }
 
-    MaterialCardView card() {
+    public MaterialCardView card() {
         MaterialCardView card = ui.card();
         LinearLayout body = ui.cardBody();
         card.addView(body);
@@ -99,7 +101,7 @@ final class DiagnosticsScreen {
         return card;
     }
 
-    void onDestroy() {
+    public void onDestroy() {
         executor.shutdownNow();
     }
 
