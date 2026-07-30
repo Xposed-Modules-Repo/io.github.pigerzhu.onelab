@@ -59,6 +59,10 @@ public final class AppListPage {
         String status(AppEntry app);
     }
 
+    public interface AppFilter {
+        boolean include(AppEntry app);
+    }
+
     public interface AppClickListener {
         void onAppClick(AppEntry app, Runnable refreshRow);
     }
@@ -118,6 +122,18 @@ public final class AppListPage {
             AppClickListener listener,
             AppPriority priority,
             BatchAction batchAction
+    ) {
+        show(title, subtitle, statusProvider, listener, priority, batchAction, null);
+    }
+
+    public void show(
+            String title,
+            String subtitle,
+            AppStatusProvider statusProvider,
+            AppClickListener listener,
+            AppPriority priority,
+            BatchAction batchAction,
+            AppFilter filter
     ) {
         host.setShowingHomePage(false);
         Runnable parentBackAction = host.getNestedBackAction();
@@ -218,7 +234,8 @@ public final class AppListPage {
         refreshVisibleApps[0] = () -> {
             if (adapter[0] == null || cachedUserApps == null) return;
             adapter[0].submitItems(
-                    orderApps(cachedUserApps, priority, sortMode[0], descending[0]), query[0]);
+                    orderApps(filteredApps(cachedUserApps, filter),
+                            priority, sortMode[0], descending[0]), query[0]);
             empty.setVisibility(adapter[0].getItemCount() == 0 ? View.VISIBLE : View.GONE);
         };
 
@@ -262,7 +279,7 @@ public final class AppListPage {
         applySelection.setOnClickListener(v -> {
             if (batchAction == null || selection.selected.isEmpty() || adapter[0] == null) return;
             List<AppEntry> selectedApps = new ArrayList<>();
-            for (AppEntry app : cachedUserApps) {
+            for (AppEntry app : filteredApps(cachedUserApps, filter)) {
                 if (selection.selected.contains(app.packageName)) selectedApps.add(app);
             }
             selection.active = false;
@@ -275,7 +292,8 @@ public final class AppListPage {
 
         if (cachedUserApps != null) {
             adapter[0] = new AppListAdapter(
-                    orderApps(cachedUserApps, priority, sortMode[0], descending[0]),
+                    orderApps(filteredApps(cachedUserApps, filter),
+                            priority, sortMode[0], descending[0]),
                     statusProvider, listener,
                     selection, updateSelectionUi, batchAction != null);
             recycler.setAdapter(adapter[0]);
@@ -288,13 +306,23 @@ public final class AppListPage {
                 cachedUserApps = apps;
                 listHost.removeView(loading);
                 adapter[0] = new AppListAdapter(
-                        orderApps(apps, priority, sortMode[0], descending[0]),
+                        orderApps(filteredApps(apps, filter),
+                                priority, sortMode[0], descending[0]),
                         statusProvider, listener,
                         selection, updateSelectionUi, batchAction != null);
                 recycler.setAdapter(adapter[0]);
                 refreshVisibleApps[0].run();
             });
         }, "OneLab-AppList").start();
+    }
+
+    private List<AppEntry> filteredApps(List<AppEntry> apps, AppFilter filter) {
+        if (filter == null) return new ArrayList<>(apps);
+        List<AppEntry> filtered = new ArrayList<>();
+        for (AppEntry app : apps) {
+            if (filter.include(app)) filtered.add(app);
+        }
+        return filtered;
     }
 
     private List<AppEntry> orderApps(

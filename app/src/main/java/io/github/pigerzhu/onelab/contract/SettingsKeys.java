@@ -35,6 +35,8 @@ public final class SettingsKeys {
             "onelab_disable_ssrm_multiwindow_limit";
     public static final String KEY_ASPECT_RATIO_OVERRIDES = "onelab_aspect_ratio_overrides";
     public static final String KEY_REFRESH_RATE_OVERRIDES = "onelab_refresh_rate_overrides";
+    public static final String KEY_SPLIT_VIEW_RATIO_OVERRIDES =
+            "onelab_split_view_ratio_overrides";
 
     public static final long DEFAULT_CAPTIVE_DELAY_MS = 60_000L;
     public static final int DEFAULT_SDHMS_GPU_MIN_CAP_MHZ = 770;

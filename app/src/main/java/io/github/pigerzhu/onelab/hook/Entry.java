@@ -7,6 +7,7 @@ import io.github.pigerzhu.onelab.hook.applications.TongchengSplitRulesHook;
 import io.github.pigerzhu.onelab.hook.applications.XhsFoldVideoHook;
 import io.github.pigerzhu.onelab.hook.applications.XiaomiShopFoldHook;
 import io.github.pigerzhu.onelab.hook.core.HookConstants;
+import io.github.pigerzhu.onelab.hook.samsung.SamsungSplitRatioHook;
 import io.github.pigerzhu.onelab.hook.samsung.SamsungSplitRulesHook;
 import io.github.pigerzhu.onelab.hook.system.AspectRatioHook;
 import io.github.pigerzhu.onelab.hook.system.CaptivePortalHook;
@@ -40,6 +41,7 @@ public final class Entry implements IXposedHookLoadPackage {
             SdhmsThermalHook.install(lpparam);
         } else if (HookConstants.isSystemServerPackage(lpparam.packageName)) {
             AspectRatioHook.install(lpparam);
+            SamsungSplitRatioHook.install(lpparam);
             SamsungSplitRulesHook.install(lpparam);
             RefreshRateHook.install(lpparam);
         }
