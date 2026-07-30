@@ -11,6 +11,8 @@ public final class SettingsKeys {
             "onelab_umetrip_split_rules";
     public static final String KEY_ENABLE_MEITUAN_SPLIT_RULES =
             "onelab_meituan_split_rules";
+    public static final String KEY_ENABLE_ZHUANZHUAN_SPLIT_RULES =
+            "onelab_zhuanzhuan_split_rules";
     public static final String KEY_ENABLE_TONGCHENG_SPLIT_RULES =
             "onelab_tongcheng_split_rules";
     public static final String KEY_ENABLE_XIAOMI_SHOP_FOLD =

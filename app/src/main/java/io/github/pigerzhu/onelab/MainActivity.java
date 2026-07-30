@@ -29,6 +29,7 @@ import io.github.pigerzhu.onelab.feature.applications.TongchengSplitRulesScreen;
 import io.github.pigerzhu.onelab.feature.applications.UmetripSplitRulesScreen;
 import io.github.pigerzhu.onelab.feature.applications.XhsFoldVideoScreen;
 import io.github.pigerzhu.onelab.feature.applications.XiaomiShopFoldScreen;
+import io.github.pigerzhu.onelab.feature.applications.ZhuanzhuanSplitRulesScreen;
 import io.github.pigerzhu.onelab.feature.connectivity.NetworkScreen;
 import io.github.pigerzhu.onelab.feature.diagnostics.DiagnosticsScreen;
 import io.github.pigerzhu.onelab.feature.experiment.GalleryLabsScreen;
@@ -60,6 +61,7 @@ public class MainActivity extends Activity {
     private CtripSplitRulesScreen ctripSplitRulesScreen;
     private UmetripSplitRulesScreen umetripSplitRulesScreen;
     private MeituanSplitRulesScreen meituanSplitRulesScreen;
+    private ZhuanzhuanSplitRulesScreen zhuanzhuanSplitRulesScreen;
     private TongchengSplitRulesScreen tongchengSplitRulesScreen;
     private XiaomiShopFoldScreen xiaomiShopFoldScreen;
     private QqFoldLayoutScreen qqFoldLayoutScreen;
@@ -104,6 +106,8 @@ public class MainActivity extends Activity {
         ctripSplitRulesScreen = new CtripSplitRulesScreen(this, ui, settings);
         umetripSplitRulesScreen = new UmetripSplitRulesScreen(this, ui, settings);
         meituanSplitRulesScreen = new MeituanSplitRulesScreen(this, ui, settings);
+        zhuanzhuanSplitRulesScreen =
+                new ZhuanzhuanSplitRulesScreen(this, ui, settings);
         tongchengSplitRulesScreen = new TongchengSplitRulesScreen(this, ui, settings);
         xiaomiShopFoldScreen = new XiaomiShopFoldScreen(this, ui, settings);
         qqFoldLayoutScreen = new QqFoldLayoutScreen(this, ui, settings);
@@ -352,6 +356,7 @@ public class MainActivity extends Activity {
         root.addView(ctripSplitRulesScreen.card());
         root.addView(umetripSplitRulesScreen.card());
         root.addView(meituanSplitRulesScreen.card());
+        root.addView(zhuanzhuanSplitRulesScreen.card());
         root.addView(qqFoldLayoutScreen.card());
         root.addView(xhsFoldVideoScreen.card());
         root.addView(tongchengSplitRulesScreen.card());

@@ -74,7 +74,27 @@ final class SamsungSplitRuleCatalog {
                             "com.sankuai.waimai.business.restaurant.base.WebImagePreviewActivity",
                             "com.sankuai.titans.widget.media.MediaActivity",
                             "com.dianping.bizcomponent.preview.ui.BizImagePreviewActivity",
-                            "com.sankuai.waimai.platform.machpro.container.WMMPActivity"))
+                            "com.sankuai.waimai.platform.machpro.container.WMMPActivity")),
+            new RuleSet(
+                    SettingsKeys.KEY_ENABLE_ZHUANZHUAN_SPLIT_RULES,
+                    "com.wuba.zhuanzhuan",
+                    new ActivityPair[]{
+                            pair("com.wuba.zhuanzhuan.activity.MainActivity",
+                                    "com.zhuanzhuan.HomeCategoryActivityWithoutBack"),
+                            pair("com.wuba.zhuanzhuan.activity.MainActivity",
+                                    ANY_ACTIVITY),
+                            pair("com.zhuanzhuan.search.v3.SearchActivity",
+                                    ANY_ACTIVITY),
+                            pair("com.zhuanzhuan.searchresult.NativeSearchResultActivityV5",
+                                    ANY_ACTIVITY),
+                            pair("com.zhuanzhuan.module.webview.page.WebContainerActivity",
+                                    ANY_ACTIVITY),
+                            pair("com.zhuanzhuan.minigoodsdetail.MiniGoodsDetailActivity",
+                                    ANY_ACTIVITY)
+                    },
+                    setOf(
+                            "com.zhuanzhuan.login.page.LoginActivity",
+                            "com.zhuanzhuan.module.webview.ability.app.browser.PreviewContainerActivity"))
     };
 
     private SamsungSplitRuleCatalog() {
