@@ -35,6 +35,10 @@ public final class XhsFoldVideoHook {
             "com.xingin.matrix.detail.intent.DetailFeedIntentData";
     private static final String DEVICE_INFO_CONTAINER =
             "com.xingin.adaptation.device.DeviceInfoContainer";
+    // XHS 9.39.1 does not expose stable APIs for these two comment-layout gates.
+    private static final String COMMENT_ARGUMENTS = "ni6.g";
+    private static final String COMMENT_DIALOG_FACTORY = "qd8.g";
+    private static final String SCREEN_SIZE_CLASSIFIER = "es.n";
     private static final String PAD_VIDEO_PROXY =
             "com.xingyin.pad.videofeed.spi.PadNewVideoProxyImpl";
     private static final String PAD_VIDEO_CONTAINER =
@@ -101,6 +105,7 @@ public final class XhsFoldVideoHook {
             hooks += hookVideoFrameFlags(classLoader, gate);
             hooks += hookVideoIntentRoutes(classLoader, gate);
             hooks += hookPadDeviceFlag(classLoader, gate);
+            hooks += hookCommentLayoutCompatibility(classLoader, gate);
             hooks += hookStablePadLifecycle(classLoader, gate);
             Log.i(TAG, "Installed " + hooks + " stable video hooks");
         } catch (Throwable throwable) {
@@ -161,6 +166,31 @@ public final class XhsFoldVideoHook {
         return hooks;
     }
 
+    private static int hookCommentLayoutCompatibility(ClassLoader classLoader, FoldGate gate) {
+        int hooks = hookAfter(classLoader, COMMENT_ARGUMENTS, "f", param -> {
+            if (gate.isEligible()) gate.setTrue(param);
+        });
+        hooks += hookBefore(classLoader, COMMENT_DIALOG_FACTORY, "e", param -> {
+            if (gate.isEligible() && param.args != null && param.args.length == 15
+                    && param.args[10] instanceof Boolean) {
+                param.args[10] = true;
+            }
+        });
+        hooks += hookBefore(classLoader, COMMENT_DIALOG_FACTORY, "f", param -> {
+            if (gate.isEligible() && param.args != null && param.args.length == 16
+                    && param.args[11] instanceof Boolean) {
+                param.args[11] = true;
+            }
+        });
+        hooks += hookBefore(classLoader, SCREEN_SIZE_CLASSIFIER, "j", param -> {
+            if (gate.isEligible() && param.args != null && param.args.length >= 1
+                    && param.args[0] instanceof Context) {
+                gate.setTrue(param);
+            }
+        });
+        return hooks;
+    }
+
     private static int hookAfter(ClassLoader classLoader, String className, String methodName,
             HookAction action) {
         try {
@@ -168,6 +198,25 @@ public final class XhsFoldVideoHook {
             XposedBridge.hookAllMethods(type, methodName, new XC_MethodHook() {
                 @Override
                 protected void afterHookedMethod(MethodHookParam param) {
+                    try {
+                        action.apply(param);
+                    } catch (Throwable ignored) {
+                    }
+                }
+            });
+            return 1;
+        } catch (Throwable ignored) {
+            return 0;
+        }
+    }
+
+    private static int hookBefore(ClassLoader classLoader, String className, String methodName,
+            HookAction action) {
+        try {
+            Class<?> type = classLoader.loadClass(className);
+            XposedBridge.hookAllMethods(type, methodName, new XC_MethodHook() {
+                @Override
+                protected void beforeHookedMethod(MethodHookParam param) {
                     try {
                         action.apply(param);
                     } catch (Throwable ignored) {
