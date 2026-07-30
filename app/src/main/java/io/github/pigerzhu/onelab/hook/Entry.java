@@ -39,6 +39,7 @@ public final class Entry implements IXposedHookLoadPackage {
             XiaomiShopFoldHook.install(lpparam);
         } else if (HookConstants.FEISHU_PACKAGE.equals(lpparam.packageName)) {
             LarkSplitRatioHook.install(lpparam);
+            ActivityEmbeddingRatioHook.install(lpparam);
         } else if (HookConstants.GOS_PACKAGE.equals(lpparam.packageName)) {
             GosPermissionHook.install(lpparam);
         } else if (HookConstants.SDHMS_PACKAGE.equals(lpparam.packageName)) {
