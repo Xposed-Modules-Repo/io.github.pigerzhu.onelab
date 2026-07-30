@@ -72,10 +72,8 @@ final class SamsungSplitRuleCatalog {
                     setOf(
                             "com.meituan.android.upgrade.UpgradeDialogActivity",
                             "com.sankuai.waimai.business.restaurant.base.WebImagePreviewActivity",
-                            "com.sankuai.waimai.business.restaurant.poicontainer.WMRestaurantActivity",
                             "com.sankuai.titans.widget.media.MediaActivity",
                             "com.dianping.bizcomponent.preview.ui.BizImagePreviewActivity",
-                            "com.meituan.android.hotel.reuse.htchomepage.HtcHomepageActivity",
                             "com.sankuai.waimai.platform.machpro.container.WMMPActivity"))
     };
 
