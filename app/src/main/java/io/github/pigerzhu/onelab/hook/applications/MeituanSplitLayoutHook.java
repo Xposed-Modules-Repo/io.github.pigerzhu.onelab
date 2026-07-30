@@ -1,9 +1,11 @@
 package io.github.pigerzhu.onelab.hook.applications;
 
+import android.app.Activity;
 import android.content.ContentResolver;
 import android.content.Context;
 import android.content.res.Configuration;
 import android.database.ContentObserver;
+import android.graphics.Rect;
 import android.os.Handler;
 import android.os.Looper;
 import android.provider.Settings;
@@ -11,7 +13,9 @@ import android.util.DisplayMetrics;
 import android.util.Log;
 import android.view.ContextThemeWrapper;
 import android.view.Display;
+import android.view.WindowManager;
 
+import java.lang.ref.WeakReference;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -31,12 +35,19 @@ public final class MeituanSplitLayoutHook {
     private static final String TAG = "OneLab/MeituanSplitLayout";
     private static final int LARGE_SCREEN_DP = 600;
     private static final float HALF_WIDTH_RATIO = 1.75f;
+    private static final String HOTEL_ACTIVITY =
+            "com.meituan.android.hotel.reuse.htchomepage.HtcHomepageActivity";
+    private static final String REACT_CONTEXT =
+            "com.facebook.react.bridge.ReactContext";
     private static final Set<String> SCALED_ACTIVITIES = Set.of(
-            "com.meituan.android.hotel.reuse.htchomepage.HtcHomepageActivity",
             "com.sankuai.waimai.business.restaurant.poicontainer.WMRestaurantActivity"
     );
     private static final AtomicBoolean INSTALLED = new AtomicBoolean();
     private static final AtomicBoolean LOGGED_ACTIVE = new AtomicBoolean();
+    private static final AtomicBoolean LOGGED_HOTEL_ACTIVE = new AtomicBoolean();
+    private static final AtomicBoolean REACT_HOOK_INSTALLED = new AtomicBoolean();
+    private static volatile WeakReference<Activity> resumedHotel =
+            new WeakReference<>(null);
 
     private MeituanSplitLayoutHook() {
     }
@@ -94,28 +105,114 @@ public final class MeituanSplitLayoutHook {
                         Context context = (Context) param.args[0];
                         enabled.set(isEnabled(context));
                         observeEnabledSetting(context, enabled);
+                        installHotelReactHook(context.getClassLoader(), enabled);
                     }
                 });
         Log.i(TAG, "Installed stable Activity layout hook");
+    }
+
+    private static void installHotelReactHook(
+            ClassLoader classLoader,
+            AtomicBoolean enabled) {
+        if (classLoader == null || !REACT_HOOK_INSTALLED.compareAndSet(false, true)) {
+            return;
+        }
+        try {
+            XposedBridge.hookAllMethods(
+                    Activity.class,
+                    "onResume",
+                    new XC_MethodHook() {
+                        @Override
+                        protected void afterHookedMethod(MethodHookParam param) {
+                            if (param.thisObject instanceof Activity
+                                    && HOTEL_ACTIVITY.equals(
+                                    param.thisObject.getClass().getName())) {
+                                resumedHotel = new WeakReference<>(
+                                        (Activity) param.thisObject);
+                            }
+                        }
+                    });
+            XposedBridge.hookAllMethods(
+                    Activity.class,
+                    "onPause",
+                    new XC_MethodHook() {
+                        @Override
+                        protected void beforeHookedMethod(MethodHookParam param) {
+                            Activity current = resumedHotel.get();
+                            if (current == param.thisObject) {
+                                resumedHotel = new WeakReference<>(null);
+                            }
+                        }
+                    });
+
+            Class<?> reactContext = classLoader.loadClass(REACT_CONTEXT);
+            XposedBridge.hookAllMethods(
+                    reactContext,
+                    "isFoldableWhiteSpaceAllEnabled",
+                    new XC_MethodHook() {
+                        @Override
+                        protected void afterHookedMethod(MethodHookParam param) {
+                            Activity activity = resumedHotel.get();
+                            if (enabled.get()
+                                    && activity != null
+                                    && isHalfWidthExpandedPane(activity)) {
+                                param.setResult(false);
+                                if (LOGGED_HOTEL_ACTIVE.compareAndSet(false, true)) {
+                                    Log.i(TAG, "Disabled hotel MRN full-width injection");
+                                }
+                            }
+                        }
+                    });
+            Log.i(TAG, "Installed hotel MRN width hook");
+        } catch (Throwable throwable) {
+            REACT_HOOK_INSTALLED.set(false);
+            XposedBridge.log(TAG + ": hotel MRN hook failed");
+            XposedBridge.log(throwable);
+        }
     }
 
     private static boolean isHalfWidthExpandedPane(Context context) {
         Configuration configuration =
                 context.getResources().getConfiguration();
         DisplayMetrics metrics = context.getResources().getDisplayMetrics();
-        Display display = context.getDisplay();
-        if (display == null || configuration.screenWidthDp >= LARGE_SCREEN_DP) {
+        if (configuration.screenWidthDp >= LARGE_SCREEN_DP) {
             return false;
         }
+        int configurationMaximumWidth = maximumBoundsWidth(configuration);
+        if (configurationMaximumWidth
+                >= Math.round(metrics.widthPixels * HALF_WIDTH_RATIO)) {
+            return true;
+        }
+        WindowManager windowManager = context.getSystemService(WindowManager.class);
+        if (windowManager != null) {
+            int currentWidth =
+                    windowManager.getCurrentWindowMetrics().getBounds().width();
+            int maximumWidth =
+                    windowManager.getMaximumWindowMetrics().getBounds().width();
+            if (maximumWidth >= Math.round(currentWidth * HALF_WIDTH_RATIO)) {
+                return true;
+            }
+        }
+        Display display = context.getDisplay();
+        if (display == null) return false;
         int physicalWidth = display.getMode().getPhysicalWidth();
         return physicalWidth >= Math.round(metrics.widthPixels * HALF_WIDTH_RATIO);
     }
 
     private static int targetDensityDpi(Context context, DisplayMetrics metrics) {
-        Display display = context.getDisplay();
-        int physicalWidth = display == null
-                ? metrics.widthPixels * 2
-                : display.getMode().getPhysicalWidth();
+        int physicalWidth = maximumBoundsWidth(
+                context.getResources().getConfiguration());
+        WindowManager windowManager = context.getSystemService(WindowManager.class);
+        if (physicalWidth <= metrics.widthPixels && windowManager != null) {
+            physicalWidth =
+                    windowManager.getMaximumWindowMetrics().getBounds().width();
+        }
+        if (physicalWidth <= metrics.widthPixels) {
+            Display display = context.getDisplay();
+            physicalWidth = display == null
+                    ? metrics.widthPixels * 2
+                    : display.getMode().getPhysicalWidth();
+        }
         int fullWidthDp = Math.max(
                 LARGE_SCREEN_DP,
                 Math.round(physicalWidth * DisplayMetrics.DENSITY_DEFAULT
@@ -124,6 +221,18 @@ public final class MeituanSplitLayoutHook {
                 DisplayMetrics.DENSITY_LOW,
                 Math.round(metrics.widthPixels * DisplayMetrics.DENSITY_DEFAULT
                         / (float) fullWidthDp));
+    }
+
+    private static int maximumBoundsWidth(Configuration configuration) {
+        try {
+            Object windowConfiguration = XposedHelpers.getObjectField(
+                    configuration, "windowConfiguration");
+            Object value = XposedHelpers.callMethod(
+                    windowConfiguration, "getMaxBounds");
+            return value instanceof Rect ? ((Rect) value).width() : 0;
+        } catch (Throwable ignored) {
+            return 0;
+        }
     }
 
     private static int pixelsToDp(int pixels, int densityDpi) {
