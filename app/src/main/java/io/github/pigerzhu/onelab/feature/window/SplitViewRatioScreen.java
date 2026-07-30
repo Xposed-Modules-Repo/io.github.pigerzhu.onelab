@@ -33,7 +33,7 @@ public final class SplitViewRatioScreen {
     private final Ui ui;
     private final SettingsStore settings;
     private final AppListPage appList;
-    private final SamsungSplitViewClient splitViewClient = new SamsungSplitViewClient();
+    private final SamsungSplitViewClient splitViewClient;
 
     public SplitViewRatioScreen(
             MainActivity host,
@@ -45,6 +45,7 @@ public final class SplitViewRatioScreen {
         this.ui = ui;
         this.settings = settings;
         this.appList = appList;
+        this.splitViewClient = new SamsungSplitViewClient(settings);
     }
 
     public View entryCard() {
@@ -75,7 +76,7 @@ public final class SplitViewRatioScreen {
             Set<String> allowed = splitViewClient.allowedPackages();
             host.runOnUiThread(() -> {
                 if (allowed.isEmpty()) {
-                    Toast.makeText(host, "没有读取到三星应用程序分屏视图列表",
+                    Toast.makeText(host, "尚未同步三星应用程序分屏视图列表，请重启设备后重试",
                             Toast.LENGTH_LONG).show();
                     return;
                 }

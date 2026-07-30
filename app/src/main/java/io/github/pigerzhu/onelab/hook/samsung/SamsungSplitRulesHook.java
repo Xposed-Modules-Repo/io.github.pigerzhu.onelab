@@ -1,5 +1,7 @@
 package io.github.pigerzhu.onelab.hook.samsung;
 
+import static io.github.pigerzhu.onelab.contract.SettingsKeys.KEY_SPLIT_VIEW_ALLOWED_PACKAGES;
+
 import io.github.pigerzhu.onelab.hook.core.HookConstants;
 import io.github.pigerzhu.onelab.hook.core.HookUtils;
 
@@ -10,7 +12,10 @@ import android.os.Looper;
 import android.provider.Settings;
 import android.util.Log;
 
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -41,6 +46,7 @@ public final class SamsungSplitRulesHook {
     private static final Set<String> INJECTED_PACKAGES = new HashSet<>();
 
     private static volatile Object activeRepository;
+    private static volatile ContentResolver activeResolver;
     private static volatile boolean observersRegistered;
     private static volatile ControllerPath controllerPath;
 
@@ -163,6 +169,7 @@ public final class SamsungSplitRulesHook {
 
             synchronized (LOCK) {
                 activeRepository = repository;
+                activeResolver = resolver;
                 refreshEnabledStates(resolver);
                 registerObserversLocked(resolver);
                 applyLocked(repository);
@@ -240,6 +247,27 @@ public final class SamsungSplitRulesHook {
                         + ruleSet.packageName);
                 XposedBridge.log(throwable);
             }
+        }
+        publishAllowedPackagesLocked(rules);
+    }
+
+    private static void publishAllowedPackagesLocked(Map<?, ?> rules) {
+        ContentResolver resolver = activeResolver;
+        if (resolver == null) return;
+
+        List<String> packages = new ArrayList<>();
+        for (Object key : rules.keySet()) {
+            if (key instanceof String && !((String) key).isEmpty()) {
+                packages.add((String) key);
+            }
+        }
+        Collections.sort(packages);
+        String snapshot = String.join(",", packages);
+        String current = Settings.Global.getString(
+                resolver, KEY_SPLIT_VIEW_ALLOWED_PACKAGES);
+        if (!snapshot.equals(current)) {
+            Settings.Global.putString(
+                    resolver, KEY_SPLIT_VIEW_ALLOWED_PACKAGES, snapshot);
         }
     }
 

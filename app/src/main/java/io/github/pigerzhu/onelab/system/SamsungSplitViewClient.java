@@ -1,34 +1,27 @@
 package io.github.pigerzhu.onelab.system;
 
-import java.lang.reflect.Method;
-import java.util.Collections;
+import static io.github.pigerzhu.onelab.contract.SettingsKeys.KEY_SPLIT_VIEW_ALLOWED_PACKAGES;
+
 import java.util.LinkedHashSet;
-import java.util.List;
 import java.util.Set;
 
-/** Reads the same Samsung split-activity allowlist used by Settings. */
+/** Reads the split-activity package snapshot published by the system-server hook. */
 public final class SamsungSplitViewClient {
-    private static final String MULTI_WINDOW_MANAGER =
-            "com.samsung.android.multiwindow.MultiWindowManager";
+    private final SettingsStore settings;
+
+    public SamsungSplitViewClient(SettingsStore settings) {
+        this.settings = settings;
+    }
 
     public Set<String> allowedPackages() {
-        try {
-            Class<?> managerClass = Class.forName(MULTI_WINDOW_MANAGER);
-            Method getInstance = managerClass.getMethod("getInstance");
-            Object manager = getInstance.invoke(null);
-            Method getPackages = managerClass.getMethod("getSplitActivityAllowPackages");
-            Object value = getPackages.invoke(manager);
-            if (!(value instanceof List)) return Collections.emptySet();
-
-            LinkedHashSet<String> packages = new LinkedHashSet<>();
-            for (Object item : (List<?>) value) {
-                if (item instanceof String && !((String) item).isEmpty()) {
-                    packages.add((String) item);
-                }
+        LinkedHashSet<String> packages = new LinkedHashSet<>();
+        String raw = settings.getGlobal(KEY_SPLIT_VIEW_ALLOWED_PACKAGES, "");
+        for (String item : raw.split(",")) {
+            String packageName = item.trim();
+            if (!packageName.isEmpty()) {
+                packages.add(packageName);
             }
-            return packages;
-        } catch (Throwable ignored) {
-            return Collections.emptySet();
         }
+        return packages;
     }
 }
