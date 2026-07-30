@@ -7,6 +7,7 @@ import io.github.pigerzhu.onelab.hook.applications.TongchengSplitRulesHook;
 import io.github.pigerzhu.onelab.hook.applications.XhsFoldVideoHook;
 import io.github.pigerzhu.onelab.hook.applications.XiaomiShopFoldHook;
 import io.github.pigerzhu.onelab.hook.core.HookConstants;
+import io.github.pigerzhu.onelab.hook.samsung.ActivityEmbeddingRatioHook;
 import io.github.pigerzhu.onelab.hook.samsung.SamsungSplitRatioHook;
 import io.github.pigerzhu.onelab.hook.samsung.SamsungSplitRulesHook;
 import io.github.pigerzhu.onelab.hook.system.AspectRatioHook;
@@ -39,6 +40,8 @@ public final class Entry implements IXposedHookLoadPackage {
             GosPermissionHook.install(lpparam);
         } else if (HookConstants.SDHMS_PACKAGE.equals(lpparam.packageName)) {
             SdhmsThermalHook.install(lpparam);
+        } else if (HookConstants.isActivityEmbeddingCandidate(lpparam.packageName)) {
+            ActivityEmbeddingRatioHook.install(lpparam);
         } else if (HookConstants.isSystemServerPackage(lpparam.packageName)) {
             AspectRatioHook.install(lpparam);
             SamsungSplitRatioHook.install(lpparam);
