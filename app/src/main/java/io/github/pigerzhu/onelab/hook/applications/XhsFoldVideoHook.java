@@ -35,10 +35,10 @@ public final class XhsFoldVideoHook {
             "com.xingin.matrix.detail.intent.DetailFeedIntentData";
     private static final String DEVICE_INFO_CONTAINER =
             "com.xingin.adaptation.device.DeviceInfoContainer";
-    // XHS 9.39.1 does not expose stable APIs for these two comment-layout gates.
-    private static final String COMMENT_ARGUMENTS = "ni6.g";
-    private static final String COMMENT_DIALOG_FACTORY = "qd8.g";
-    private static final String SCREEN_SIZE_CLASSIFIER = "es.n";
+    // XHS does not expose stable APIs for these comment-layout gates.
+    private static final String[] COMMENT_ARGUMENTS = {"ni6.g", "qj6.g"};
+    private static final String[] COMMENT_DIALOG_FACTORIES = {"qd8.g", "ue8.g"};
+    private static final String[] SCREEN_SIZE_CLASSIFIERS = {"es.n", "yr.n"};
     private static final String PAD_VIDEO_PROXY =
             "com.xingyin.pad.videofeed.spi.PadNewVideoProxyImpl";
     private static final String PAD_VIDEO_CONTAINER =
@@ -167,27 +167,34 @@ public final class XhsFoldVideoHook {
     }
 
     private static int hookCommentLayoutCompatibility(ClassLoader classLoader, FoldGate gate) {
-        int hooks = hookAfter(classLoader, COMMENT_ARGUMENTS, "f", param -> {
-            if (gate.isEligible()) gate.setTrue(param);
-        });
-        hooks += hookBefore(classLoader, COMMENT_DIALOG_FACTORY, "e", param -> {
-            if (gate.isEligible() && param.args != null && param.args.length == 15
-                    && param.args[10] instanceof Boolean) {
-                param.args[10] = true;
-            }
-        });
-        hooks += hookBefore(classLoader, COMMENT_DIALOG_FACTORY, "f", param -> {
-            if (gate.isEligible() && param.args != null && param.args.length == 16
-                    && param.args[11] instanceof Boolean) {
-                param.args[11] = true;
-            }
-        });
-        hooks += hookBefore(classLoader, SCREEN_SIZE_CLASSIFIER, "j", param -> {
-            if (gate.isEligible() && param.args != null && param.args.length >= 1
-                    && param.args[0] instanceof Context) {
-                gate.setTrue(param);
-            }
-        });
+        int hooks = 0;
+        for (String className : COMMENT_ARGUMENTS) {
+            hooks += hookAfter(classLoader, className, "f", param -> {
+                if (gate.isEligible()) gate.setTrue(param);
+            });
+        }
+        for (String className : COMMENT_DIALOG_FACTORIES) {
+            hooks += hookBefore(classLoader, className, "e", param -> {
+                if (gate.isEligible() && param.args != null && param.args.length == 15
+                        && param.args[10] instanceof Boolean) {
+                    param.args[10] = true;
+                }
+            });
+            hooks += hookBefore(classLoader, className, "f", param -> {
+                if (gate.isEligible() && param.args != null && param.args.length == 16
+                        && param.args[11] instanceof Boolean) {
+                    param.args[11] = true;
+                }
+            });
+        }
+        for (String className : SCREEN_SIZE_CLASSIFIERS) {
+            hooks += hookBefore(classLoader, className, "j", param -> {
+                if (gate.isEligible() && param.args != null && param.args.length >= 1
+                        && param.args[0] instanceof Context) {
+                    gate.setTrue(param);
+                }
+            });
+        }
         return hooks;
     }
 
