@@ -39,12 +39,15 @@ public final class MeituanSplitLayoutHook {
             "com.meituan.android.hotel.reuse.htchomepage.HtcHomepageActivity";
     private static final String REACT_CONTEXT =
             "com.facebook.react.bridge.ReactContext";
+    private static final String UI_MANAGER_UNIT_CONVERTER =
+            "com.facebook.react.uimanager.i0";
     private static final Set<String> SCALED_ACTIVITIES = Set.of(
             "com.sankuai.waimai.business.restaurant.poicontainer.WMRestaurantActivity"
     );
     private static final AtomicBoolean INSTALLED = new AtomicBoolean();
     private static final AtomicBoolean LOGGED_ACTIVE = new AtomicBoolean();
     private static final AtomicBoolean LOGGED_HOTEL_ACTIVE = new AtomicBoolean();
+    private static final AtomicBoolean LOGGED_HOTEL_RPT = new AtomicBoolean();
     private static final AtomicBoolean REACT_HOOK_INSTALLED = new AtomicBoolean();
     private static volatile WeakReference<Activity> resumedHotel =
             new WeakReference<>(null);
@@ -160,6 +163,40 @@ public final class MeituanSplitLayoutHook {
                                 if (LOGGED_HOTEL_ACTIVE.compareAndSet(false, true)) {
                                     Log.i(TAG, "Disabled hotel MRN full-width injection");
                                 }
+                            }
+                        }
+                    });
+            Class<?> unitConverter = classLoader.loadClass(
+                    UI_MANAGER_UNIT_CONVERTER);
+            XposedHelpers.findAndHookMethod(
+                    unitConverter,
+                    "n",
+                    String.class,
+                    new XC_MethodHook() {
+                        @Override
+                        protected void beforeHookedMethod(MethodHookParam param) {
+                            Activity activity = resumedHotel.get();
+                            if (!enabled.get()
+                                    || activity == null
+                                    || !isHalfWidthExpandedPane(activity)
+                                    || param.args == null
+                                    || param.args.length != 1
+                                    || !(param.args[0] instanceof String)) {
+                                return;
+                            }
+                            String value = (String) param.args[0];
+                            if (!value.endsWith("rpt")) return;
+
+                            DisplayMetrics metrics =
+                                    activity.getResources().getDisplayMetrics();
+                            float designWidthDp =
+                                    metrics.widthPixels / metrics.density;
+                            float designValue = Float.parseFloat(
+                                    value.substring(0, value.length() - 3));
+                            param.setResult(
+                                    designWidthDp / 375.0f * designValue);
+                            if (LOGGED_HOTEL_RPT.compareAndSet(false, true)) {
+                                Log.i(TAG, "Applied hotel pane rpt scale");
                             }
                         }
                     });
