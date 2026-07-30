@@ -12,6 +12,7 @@ public final class HookConstants {
     public static final String XHS_PACKAGE = "com.xingin.xhs";
     public static final String TONGCHENG_PACKAGE = "com.tongcheng.android";
     public static final String XIAOMI_SHOP_PACKAGE = "com.xiaomi.shop";
+    public static final String MEITUAN_PACKAGE = "com.sankuai.meituan";
     public static final String GOS_PACKAGE = "com.samsung.android.game.gos";
     public static final String SDHMS_PACKAGE = "com.sec.android.sdhms";
     public static final String SYSTEM_SERVER_PACKAGE = "android";
