@@ -134,8 +134,8 @@ public final class SplitViewRatioScreen {
     ) {
         float leftValue = current == null ? 50f : current * 100f;
         float rightValue = current == null ? 50f : (1f - current) * 100f;
-        EditText left = ratioInput(leftValue);
-        EditText right = ratioInput(rightValue);
+        EditText left = ratioInput(leftValue, current != null);
+        EditText right = ratioInput(rightValue, current != null);
 
         LinearLayout row = new LinearLayout(host);
         row.setGravity(Gravity.CENTER_VERTICAL);
@@ -183,12 +183,16 @@ public final class SplitViewRatioScreen {
         dialog.show();
     }
 
-    private EditText ratioInput(float value) {
+    private EditText ratioInput(float value, boolean hasSavedValue) {
         EditText input = new EditText(host);
         input.setSingleLine(true);
         input.setInputType(InputType.TYPE_CLASS_NUMBER
                 | InputType.TYPE_NUMBER_FLAG_DECIMAL);
-        input.setText(formatPercent(value));
+        if (hasSavedValue) {
+            input.setText(formatPercent(value));
+        } else {
+            input.setHint(formatPercent(value));
+        }
         input.setTextSize(20);
         input.setGravity(Gravity.CENTER);
         input.setMinHeight(ui.dp(56));
