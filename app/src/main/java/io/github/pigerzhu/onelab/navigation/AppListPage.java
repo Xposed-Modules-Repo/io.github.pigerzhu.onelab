@@ -12,7 +12,6 @@ import android.graphics.drawable.Drawable;
 import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
-import android.view.WindowInsets;
 import android.widget.CheckBox;
 import android.widget.FrameLayout;
 import android.widget.ImageView;
@@ -137,17 +136,7 @@ public final class AppListPage {
         if (host.isUsingLargeScreenLayout()) {
             page.setPadding(ui.dp(16), ui.dp(8), ui.dp(16), 0);
         } else {
-            page.setPadding(ui.dp(16), ui.dp(24), ui.dp(16), 0);
-            page.setOnApplyWindowInsetsListener((view, insets) -> {
-                int statusBarTop = insets.getInsets(WindowInsets.Type.statusBars()).top;
-                view.setPadding(
-                        ui.dp(16),
-                        Math.max(ui.dp(24), statusBarTop + ui.dp(8)),
-                        ui.dp(16),
-                        0);
-                return insets;
-            });
-            page.requestApplyInsets();
+            page.setPadding(ui.dp(16), ui.dp(8), ui.dp(16), 0);
         }
 
         AppListToolbar toolbar = new AppListToolbar(

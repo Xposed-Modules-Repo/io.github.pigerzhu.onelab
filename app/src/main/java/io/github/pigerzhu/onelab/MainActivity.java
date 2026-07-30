@@ -393,7 +393,18 @@ public class MainActivity extends Activity {
 
         if (!largeScreenLayout) {
             foldSidebar = null;
+            pageHost.setClipChildren(true);
+            pageHost.setClipToPadding(true);
+            pageHost.setOnApplyWindowInsetsListener((view, insets) -> {
+                int top = insets.getInsets(
+                        android.view.WindowInsets.Type.statusBars()).top + ui.dp(8);
+                if (view.getPaddingTop() != top) {
+                    view.setPadding(0, top, 0, 0);
+                }
+                return insets;
+            });
             setContentView(pageHost);
+            pageHost.requestApplyInsets();
             return;
         }
 
