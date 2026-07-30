@@ -10,6 +10,7 @@ import android.os.Looper;
 import android.provider.Settings;
 
 import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 
 import de.robv.android.xposed.XC_MethodHook;
@@ -44,6 +45,15 @@ public final class SamsungSplitRatioHook {
                         @Override
                         protected void beforeHookedMethod(MethodHookParam param) {
                             applyCustomBounds(param.thisObject);
+                        }
+                    });
+            XposedBridge.hookAllMethods(
+                    activityRecordClass,
+                    "reparentGroup",
+                    new XC_MethodHook() {
+                        @Override
+                        protected void afterHookedMethod(MethodHookParam param) {
+                            applyCustomBounds(param.thisObject, true);
                         }
                     });
 
@@ -90,6 +100,10 @@ public final class SamsungSplitRatioHook {
     }
 
     private static void applyCustomBounds(Object activityRecord) {
+        applyCustomBounds(activityRecord, false);
+    }
+
+    private static void applyCustomBounds(Object activityRecord, boolean updateActivities) {
         Object group = HookUtils.findFieldValue(activityRecord, "mActivityGroup");
         Object zoneValue = HookUtils.findFieldValue(group, "mZone");
         if (!(zoneValue instanceof Integer)) return;
@@ -121,8 +135,20 @@ public final class SamsungSplitRatioHook {
             splitX = Math.max(taskBounds.left + 1, Math.min(taskBounds.right - 1, splitX));
             leftBounds.set(taskBounds.left, taskBounds.top, splitX, taskBounds.bottom);
             rightBounds.set(splitX, taskBounds.top, taskBounds.right, taskBounds.bottom);
+            if (updateActivities) {
+                applyBoundsToChildren(leftGroup, leftBounds);
+                applyBoundsToChildren(rightGroup, rightBounds);
+            }
         } catch (Throwable ignored) {
             // Preserve Samsung's default 1:1 bounds if this firmware changes group internals.
+        }
+    }
+
+    private static void applyBoundsToChildren(Object group, Rect bounds) {
+        Object children = HookUtils.findFieldValue(group, "mChildren");
+        if (!(children instanceof List<?>)) return;
+        for (Object child : (List<?>) children) {
+            XposedHelpers.callMethod(child, "setBounds", new Rect(bounds));
         }
     }
 }

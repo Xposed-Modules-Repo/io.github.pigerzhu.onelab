@@ -46,6 +46,7 @@ public final class SamsungSplitRulesHook {
     private static final Set<String> INJECTED_PACKAGES = new HashSet<>();
 
     private static volatile Object activeRepository;
+    private static volatile Object activeEmbedRepository;
     private static volatile ContentResolver activeResolver;
     private static volatile boolean observersRegistered;
     private static volatile ControllerPath controllerPath;
@@ -132,6 +133,19 @@ public final class SamsungSplitRulesHook {
                             initializeFromBinder(param.thisObject);
                         }
                     });
+            XposedBridge.hookAllMethods(
+                    binderClass,
+                    "getSupportEmbedActivityPackages",
+                    new XC_MethodHook() {
+                        @Override
+                        protected void afterHookedMethod(MethodHookParam param) {
+                            initializeFromBinder(param.thisObject);
+                            synchronized (LOCK) {
+                                publishAllowedPackagesLocked(
+                                        repositoryMap(activeRepository));
+                            }
+                        }
+                    });
             XposedBridge.log(TAG + ": installed " + controllerPath.label);
         } catch (Throwable throwable) {
             XposedBridge.log(TAG + ": installation failed");
@@ -149,6 +163,10 @@ public final class SamsungSplitRulesHook {
         Object controller = path == null
                 ? null
                 : HookUtils.findFieldValue(atm, path.fieldName);
+        Object multiTaskingController =
+                HookUtils.findFieldValue(atm, LEGACY_CONTROLLER_FIELD);
+        activeEmbedRepository = HookUtils.findFieldValue(
+                multiTaskingController, "mActivityEmbeddedPackageRepository");
         if (controller != null) initialize(controller);
     }
 
@@ -253,14 +271,24 @@ public final class SamsungSplitRulesHook {
 
     private static void publishAllowedPackagesLocked(Map<?, ?> rules) {
         ContentResolver resolver = activeResolver;
-        if (resolver == null) return;
+        if (resolver == null || rules == null) return;
 
-        List<String> packages = new ArrayList<>();
+        Set<String> packageSet = new HashSet<>();
         for (Object key : rules.keySet()) {
             if (key instanceof String && !((String) key).isEmpty()) {
-                packages.add((String) key);
+                packageSet.add((String) key);
             }
         }
+        Object embedded = HookUtils.findFieldValue(
+                activeEmbedRepository, "mRepository");
+        if (embedded instanceof Iterable<?>) {
+            for (Object value : (Iterable<?>) embedded) {
+                if (value instanceof String && !((String) value).isEmpty()) {
+                    packageSet.add((String) value);
+                }
+            }
+        }
+        List<String> packages = new ArrayList<>(packageSet);
         Collections.sort(packages);
         String snapshot = String.join(",", packages);
         String current = Settings.Global.getString(
