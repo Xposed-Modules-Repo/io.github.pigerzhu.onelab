@@ -70,6 +70,7 @@ public final class ActivityEmbeddingRatioHook {
 
         initialize(context.getContentResolver(), packageName);
         boolean installed = installSplitAttributesBuilder(classLoader);
+        installed |= installLegacySplitRule(classLoader);
         installed |= installLegacyRuleBuilder(
                 classLoader,
                 "androidx.window.embedding.SplitPairRule$Builder");
@@ -106,6 +107,30 @@ public final class ActivityEmbeddingRatioHook {
                 } catch (Throwable throwable) {
                     logFailureOnce("SplitAttributes", throwable);
                 }
+            }
+        });
+        return true;
+    }
+
+    private static boolean installLegacySplitRule(ClassLoader classLoader) {
+        Class<?> splitRuleClass = XposedHelpers.findClassIfExists(
+                "androidx.window.embedding.SplitRule",
+                classLoader);
+        if (splitRuleClass == null) return false;
+
+        XposedBridge.hookAllConstructors(splitRuleClass, new XC_MethodHook() {
+            @Override
+            protected void beforeHookedMethod(MethodHookParam param) {
+                Float current = ratio;
+                if (current == null
+                        || param.args.length != 4
+                        || !(param.args[0] instanceof Integer)
+                        || !(param.args[1] instanceof Integer)
+                        || !(param.args[2] instanceof Float)
+                        || !(param.args[3] instanceof Integer)) {
+                    return;
+                }
+                param.args[2] = current;
             }
         });
         return true;
