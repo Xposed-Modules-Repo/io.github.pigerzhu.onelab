@@ -33,13 +33,16 @@ public final class XhsFoldVideoHook {
             "com.xingin.detailfeed.abtest.DetailFeedAbTestHelper";
     private static final String INTENT_DATA =
             "com.xingin.matrix.detail.intent.DetailFeedIntentData";
-    private static final String FOLD_CONFIG = "zf2.u";
-    private static final String COMMENT_GATE = "ni6.g";
-    private static final String COMMENT_PANEL = "qd8.g";
-    private static final String WINDOW_GATE = "es.n";
-
     private static final String DEVICE_INFO_CONTAINER =
             "com.xingin.adaptation.device.DeviceInfoContainer";
+    private static final String PAD_VIDEO_PROXY =
+            "com.xingyin.pad.videofeed.spi.PadNewVideoProxyImpl";
+    private static final String PAD_VIDEO_CONTAINER =
+            "com.xingyin.pad.videofeed.containerv2.PadNewContainerPresenter";
+    private static final String PAD_COMMENT_DIALOG =
+            "com.xingin.matrix.comment.dialog.VideoCommentLandscapeDialog";
+    private static final String PAD_COMMENT_RESIZE =
+            "com.xingyin.pad.videofeed.page.comment.PadCommentPanelResizeVideoPresenter";
 
     private static final String[] VIDEO_FRAME_FLAGS = {
             "enableNewVideoFeedFrame",
@@ -60,6 +63,10 @@ public final class XhsFoldVideoHook {
     private static final Object INSTALL_LOCK = new Object();
     private static final AtomicBoolean LOGGED_HOME_ACTIVE = new AtomicBoolean();
     private static final AtomicBoolean LOGGED_VIDEO_ACTIVE = new AtomicBoolean();
+    private static final AtomicBoolean LOGGED_PAD_PROXY = new AtomicBoolean();
+    private static final AtomicBoolean LOGGED_PAD_CONTAINER = new AtomicBoolean();
+    private static final AtomicBoolean LOGGED_COMMENT_DIALOG = new AtomicBoolean();
+    private static final AtomicBoolean LOGGED_COMMENT_RESIZE = new AtomicBoolean();
 
     private XhsFoldVideoHook() {
     }
@@ -94,10 +101,8 @@ public final class XhsFoldVideoHook {
             hooks += hookVideoFrameFlags(classLoader, gate);
             hooks += hookVideoIntentRoutes(classLoader, gate);
             hooks += hookPadDeviceFlag(classLoader, gate);
-            hooks += hookFoldConfig(classLoader, gate);
-            hooks += hookCommentPanel(classLoader, gate);
-            hooks += hookWindowGate(classLoader, gate);
-            Log.i(TAG, "Installed " + hooks + " guarded video hooks");
+            hooks += hookStablePadLifecycle(classLoader, gate);
+            Log.i(TAG, "Installed " + hooks + " stable video hooks");
         } catch (Throwable throwable) {
             synchronized (INSTALL_LOCK) {
                 INSTALLED_LOADERS.remove(classLoader);
@@ -142,46 +147,18 @@ public final class XhsFoldVideoHook {
         });
     }
 
-    private static int hookFoldConfig(ClassLoader classLoader, FoldGate gate) {
-        int hooks = 0;
-        for (String methodName : new String[]{"Y0", "Z0", "A0"}) {
-            hooks += hookAfter(classLoader, FOLD_CONFIG, methodName, param -> {
-                if (gate.isEligible()) gate.setTrue(param);
-            });
-        }
+    private static int hookStablePadLifecycle(ClassLoader classLoader, FoldGate gate) {
+        int hooks = hookAfter(classLoader, PAD_VIDEO_PROXY,
+                "getPadNewDetailFeedContainer", param -> {
+                    if (gate.isEligible()) logStage(LOGGED_PAD_PROXY, "Pad video SPI invoked");
+                });
+        hooks += hookConstructors(classLoader, PAD_VIDEO_CONTAINER, gate,
+                LOGGED_PAD_CONTAINER, "Pad video container created");
+        hooks += hookConstructors(classLoader, PAD_COMMENT_DIALOG, gate,
+                LOGGED_COMMENT_DIALOG, "Landscape comment dialog created");
+        hooks += hookConstructors(classLoader, PAD_COMMENT_RESIZE, gate,
+                LOGGED_COMMENT_RESIZE, "Comment resize presenter created");
         return hooks;
-    }
-
-    private static int hookCommentPanel(ClassLoader classLoader, FoldGate gate) {
-        int hooks = hookAfter(classLoader, COMMENT_GATE, "f", param -> {
-            if (gate.isEligible()) gate.setTrue(param);
-        });
-        hooks += hookBefore(classLoader, COMMENT_PANEL, "e", param -> {
-            if (gate.isEligible() && param.args != null && param.args.length == 15
-                    && param.args[10] instanceof Boolean) {
-                param.args[10] = true;
-                gate.logActive();
-            }
-        });
-        hooks += hookBefore(classLoader, COMMENT_PANEL, "f", param -> {
-            if (gate.isEligible() && param.args != null && param.args.length == 16
-                    && param.args[11] instanceof Boolean) {
-                param.args[11] = true;
-                gate.logActive();
-            }
-        });
-        return hooks;
-    }
-
-    private static int hookWindowGate(ClassLoader classLoader, FoldGate gate) {
-        return hookBefore(classLoader, WINDOW_GATE, "j", param -> {
-            if (param.args == null || param.args.length < 1 || !(param.args[0] instanceof Context)) {
-                return;
-            }
-            if (gate.isEligible()) {
-                gate.setTrue(param);
-            }
-        });
     }
 
     private static int hookAfter(ClassLoader classLoader, String className, String methodName,
@@ -203,23 +180,24 @@ public final class XhsFoldVideoHook {
         }
     }
 
-    private static int hookBefore(ClassLoader classLoader, String className, String methodName,
-            HookAction action) {
+    private static int hookConstructors(ClassLoader classLoader, String className, FoldGate gate,
+            AtomicBoolean logged, String message) {
         try {
             Class<?> type = classLoader.loadClass(className);
-            XposedBridge.hookAllMethods(type, methodName, new XC_MethodHook() {
+            XposedBridge.hookAllConstructors(type, new XC_MethodHook() {
                 @Override
-                protected void beforeHookedMethod(MethodHookParam param) {
-                    try {
-                        action.apply(param);
-                    } catch (Throwable ignored) {
-                    }
+                protected void afterHookedMethod(MethodHookParam param) {
+                    if (gate.isEligible()) logStage(logged, message);
                 }
             });
             return 1;
         } catch (Throwable ignored) {
             return 0;
         }
+    }
+
+    private static void logStage(AtomicBoolean logged, String message) {
+        if (logged.compareAndSet(false, true)) Log.i(TAG, message);
     }
 
     private static void observeEnabledSettings(Context context, AtomicBoolean homeEnabled,
