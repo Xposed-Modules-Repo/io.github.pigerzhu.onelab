@@ -2,6 +2,7 @@ package io.github.pigerzhu.onelab.hook;
 
 import io.github.pigerzhu.onelab.hook.applications.BiliFoldGateHook;
 import io.github.pigerzhu.onelab.hook.applications.GalleryLabsHook;
+import io.github.pigerzhu.onelab.hook.applications.LarkSplitRatioHook;
 import io.github.pigerzhu.onelab.hook.applications.QqFoldLayoutHook;
 import io.github.pigerzhu.onelab.hook.applications.TongchengSplitRulesHook;
 import io.github.pigerzhu.onelab.hook.applications.XhsFoldVideoHook;
@@ -36,6 +37,8 @@ public final class Entry implements IXposedHookLoadPackage {
             TongchengSplitRulesHook.install(lpparam);
         } else if (HookConstants.XIAOMI_SHOP_PACKAGE.equals(lpparam.packageName)) {
             XiaomiShopFoldHook.install(lpparam);
+        } else if (HookConstants.FEISHU_PACKAGE.equals(lpparam.packageName)) {
+            LarkSplitRatioHook.install(lpparam);
         } else if (HookConstants.GOS_PACKAGE.equals(lpparam.packageName)) {
             GosPermissionHook.install(lpparam);
         } else if (HookConstants.SDHMS_PACKAGE.equals(lpparam.packageName)) {
