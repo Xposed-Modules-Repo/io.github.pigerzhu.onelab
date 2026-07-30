@@ -181,7 +181,8 @@ public final class XhsFoldVideoHook {
                 }
             });
             hooks += hookBefore(classLoader, className, "f", param -> {
-                if (gate.isEligible() && param.args != null && param.args.length == 16
+                if (gate.isEligible() && param.args != null
+                        && (param.args.length == 16 || param.args.length == 17)
                         && param.args[11] instanceof Boolean) {
                     param.args[11] = true;
                 }
