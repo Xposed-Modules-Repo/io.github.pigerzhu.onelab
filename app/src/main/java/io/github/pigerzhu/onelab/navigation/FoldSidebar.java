@@ -46,6 +46,7 @@ public final class FoldSidebar {
     private boolean expanded;
     private boolean targetExpanded;
     private ValueAnimator widthAnimator;
+    private ImageButton settingsIcon;
     private int selectedSection;
 
     public FoldSidebar(MainActivity host, Ui ui, int selectedSection, Listener listener) {
@@ -68,6 +69,12 @@ public final class FoldSidebar {
         content.setPadding(ui.dp(12), ui.dp(14), ui.dp(12), ui.dp(14));
         card.addView(content, new ViewGroup.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+        settingsIcon = iconButton(R.drawable.ic_settings, "外观设置",
+                v -> listener.onAppearanceSelected());
+        card.addView(settingsIcon, new ViewGroup.LayoutParams(ui.dp(52), ui.dp(52)));
+        card.addOnLayoutChangeListener((v, left, top, right, bottom,
+                oldLeft, oldTop, oldRight, oldBottom) ->
+                positionSettingsIcon(right - left));
         rebuild();
     }
 
@@ -109,6 +116,7 @@ public final class FoldSidebar {
             rebuild();
             card.getLayoutParams().width = targetWidth;
             card.requestLayout();
+            positionSettingsIcon(targetWidth);
             return;
         }
         if (value) {
@@ -116,6 +124,10 @@ public final class FoldSidebar {
             rebuild();
         }
         int startWidth = card.getWidth() > 0 ? card.getWidth() : card.getLayoutParams().width;
+        float startX = settingsIcon.getX();
+        float startY = settingsIcon.getY();
+        float endX = settingsIconX(value, targetWidth);
+        float endY = settingsIconY(value, card.getHeight());
         ValueAnimator animator = ValueAnimator.ofInt(startWidth, targetWidth);
         widthAnimator = animator;
         animator.setDuration(WIDTH_ANIMATION_MS);
@@ -123,6 +135,9 @@ public final class FoldSidebar {
         animator.addUpdateListener(valueAnimator -> {
             card.getLayoutParams().width = (Integer) valueAnimator.getAnimatedValue();
             card.requestLayout();
+            float fraction = valueAnimator.getAnimatedFraction();
+            settingsIcon.setX(startX + (endX - startX) * fraction);
+            settingsIcon.setY(startY + (endY - startY) * fraction);
         });
         animator.addListener(new AnimatorListenerAdapter() {
             @Override
@@ -134,6 +149,7 @@ public final class FoldSidebar {
                     expanded = false;
                     rebuild();
                 }
+                positionSettingsIcon(card.getWidth());
             }
         });
         animator.start();
@@ -152,11 +168,6 @@ public final class FoldSidebar {
         Space spacer = new Space(host);
         content.addView(spacer, new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, 0, 1));
-        if (!expanded) {
-            content.addView(iconButton(
-                    R.drawable.ic_settings, "外观设置", v -> listener.onAppearanceSelected()),
-                    centeredIconParams());
-        }
     }
 
     private View header() {
@@ -165,14 +176,6 @@ public final class FoldSidebar {
         header.setOrientation(LinearLayout.HORIZONTAL);
         header.addView(iconButton(R.drawable.ic_menu, expanded ? "收起菜单" : "展开菜单",
                 v -> setExpanded(!targetExpanded, true)), iconParams());
-
-        if (expanded) {
-            Space spacer = new Space(host);
-            header.addView(spacer, new LinearLayout.LayoutParams(0, 1, 1));
-            header.addView(iconButton(
-                    R.drawable.ic_settings, "外观设置", v -> listener.onAppearanceSelected()),
-                    iconParams());
-        }
         return header;
     }
 
@@ -257,14 +260,35 @@ public final class FoldSidebar {
         return new LinearLayout.LayoutParams(ui.dp(52), ui.dp(52));
     }
 
-    private LinearLayout.LayoutParams centeredIconParams() {
-        LinearLayout.LayoutParams params = iconParams();
-        params.gravity = Gravity.CENTER_HORIZONTAL;
-        return params;
-    }
-
     private int widthFor(boolean value) {
         return ui.dp(value ? 300 : 84);
+    }
+
+    private float settingsIconX(boolean expandedState, int cardWidth) {
+        if (expandedState) {
+            return cardWidth - ui.dp(12) - ui.dp(52);
+        }
+        int contentWidth = cardWidth - ui.dp(12) * 2;
+        return ui.dp(12) + (contentWidth - ui.dp(52)) / 2f;
+    }
+
+    private float settingsIconY(boolean expandedState, int cardHeight) {
+        if (expandedState) {
+            return ui.dp(14);
+        }
+        return cardHeight - ui.dp(14) - ui.dp(52);
+    }
+
+    private void positionSettingsIcon(int cardWidth) {
+        if (settingsIcon == null || widthAnimator != null) {
+            return;
+        }
+        int cardHeight = card.getHeight();
+        if (cardWidth <= 0 || cardHeight <= 0) {
+            return;
+        }
+        settingsIcon.setX(settingsIconX(expanded, cardWidth));
+        settingsIcon.setY(settingsIconY(expanded, cardHeight));
     }
 
     private final class SidebarCard extends MaterialCardView {
