@@ -41,6 +41,12 @@ public final class BiliFoldGateScreen {
         header.addView(copy, new LinearLayout.LayoutParams(
                 0, ViewGroup.LayoutParams.WRAP_CONTENT, 1));
         copy.addView(ui.text("B 站原生大屏适配", 20, true, ui.colorOnSurface));
+        copy.addView(ui.text(
+                "启用全局响应式窗口布局；可能与仅适配手机布局的净化模块冲突，"
+                        + "修改后需重启 B 站",
+                14,
+                false,
+                ui.colorOnSurfaceVariant));
 
         MaterialSwitch toggle = new MaterialSwitch(host);
         toggle.setChecked("1".equals(settings.getGlobal(KEY_ENABLE_BILI_FOLD_GATE, "0")));

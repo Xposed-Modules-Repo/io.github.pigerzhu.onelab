@@ -1,15 +1,9 @@
 package io.github.pigerzhu.onelab.hook.applications;
 
-import io.github.pigerzhu.onelab.hook.core.HookConstants;
 import io.github.pigerzhu.onelab.hook.core.HookUtils;
 
 import android.app.Application;
-import android.content.ContentResolver;
 import android.content.Context;
-import android.database.ContentObserver;
-import android.os.Handler;
-import android.os.Looper;
-import android.provider.Settings;
 import android.util.Log;
 
 import java.util.Collections;
@@ -19,6 +13,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import de.robv.android.xposed.XC_MethodHook;
 import de.robv.android.xposed.XposedBridge;
+import de.robv.android.xposed.XposedHelpers;
 import de.robv.android.xposed.callbacks.XC_LoadPackage;
 import io.github.pigerzhu.onelab.contract.SettingsKeys;
 
@@ -58,22 +53,27 @@ public final class BiliFoldGateHook {
         }
 
         try {
-            AtomicBoolean enabled = new AtomicBoolean(isEnabled(context));
-            observeEnabledSetting(context, enabled);
+            boolean enabled = isEnabled(context);
             Class<?> configClass = classLoader.loadClass(KCONFIG_CLASS);
-            XposedBridge.hookAllMethods(configClass, CONFIG_METHOD, new XC_MethodHook() {
-                @Override
-                protected void afterHookedMethod(MethodHookParam param) {
-                    if (!enabled.get() || param.args == null || param.args.length < 1
-                            || !LARGE_SCREEN_KEY.equals(param.args[0])) {
-                        return;
-                    }
-                    param.setResult("large");
-                    if (LOGGED_REWRITE.compareAndSet(false, true)) {
-                        Log.i(TAG, LARGE_SCREEN_KEY + " off -> large");
-                    }
-                }
-            });
+            XposedHelpers.findAndHookMethod(
+                    configClass,
+                    CONFIG_METHOD,
+                    String.class,
+                    String.class,
+                    new XC_MethodHook() {
+                        @Override
+                        protected void afterHookedMethod(MethodHookParam param) {
+                            if (!enabled
+                                    || !LARGE_SCREEN_KEY.equals(param.args[0])
+                                    || !"off".equals(param.getResult())) {
+                                return;
+                            }
+                            param.setResult("large");
+                            if (LOGGED_REWRITE.compareAndSet(false, true)) {
+                                Log.i(TAG, LARGE_SCREEN_KEY + " off -> large");
+                            }
+                        }
+                    });
             Log.i(TAG, "Hooked KConfig.config for " + LARGE_SCREEN_KEY);
         } catch (Throwable t) {
             synchronized (INSTALL_LOCK) {
@@ -82,19 +82,6 @@ public final class BiliFoldGateHook {
             XposedBridge.log(TAG + ": KConfig hook installation failed");
             XposedBridge.log(t);
         }
-    }
-
-    private static void observeEnabledSetting(Context context, AtomicBoolean enabled) {
-        ContentResolver resolver = context.getContentResolver();
-        resolver.registerContentObserver(
-                Settings.Global.getUriFor(SettingsKeys.KEY_ENABLE_BILI_FOLD_GATE),
-                false,
-                new ContentObserver(new Handler(Looper.getMainLooper())) {
-                    @Override
-                    public void onChange(boolean selfChange) {
-                        enabled.set(isEnabled(context));
-                    }
-                });
     }
 
     private static boolean isEnabled(Context context) {
