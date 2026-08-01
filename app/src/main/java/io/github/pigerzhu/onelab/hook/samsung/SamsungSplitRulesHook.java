@@ -49,6 +49,7 @@ public final class SamsungSplitRulesHook {
     private static volatile Object activeEmbedRepository;
     private static volatile ContentResolver activeResolver;
     private static volatile boolean observersRegistered;
+    private static volatile boolean embedSnapshotReady;
     private static volatile ControllerPath controllerPath;
 
     private SamsungSplitRulesHook() {
@@ -132,6 +133,15 @@ public final class SamsungSplitRulesHook {
                         protected void beforeHookedMethod(MethodHookParam param) {
                             initializeFromBinder(param.thisObject);
                         }
+
+                        @Override
+                        protected void afterHookedMethod(MethodHookParam param) {
+                            synchronized (LOCK) {
+                                publishAllowedPackagesLocked(
+                                        repositoryMap(activeRepository),
+                                        param.getResult());
+                            }
+                        }
                     });
             XposedBridge.hookAllMethods(
                     binderClass,
@@ -141,8 +151,10 @@ public final class SamsungSplitRulesHook {
                         protected void afterHookedMethod(MethodHookParam param) {
                             initializeFromBinder(param.thisObject);
                             synchronized (LOCK) {
+                                embedSnapshotReady = true;
                                 publishAllowedPackagesLocked(
-                                        repositoryMap(activeRepository));
+                                        repositoryMap(activeRepository),
+                                        param.getResult());
                             }
                         }
                     });
@@ -266,10 +278,10 @@ public final class SamsungSplitRulesHook {
                 XposedBridge.log(throwable);
             }
         }
-        publishAllowedPackagesLocked(rules);
+        publishAllowedPackagesLocked(rules, null);
     }
 
-    private static void publishAllowedPackagesLocked(Map<?, ?> rules) {
+    private static void publishAllowedPackagesLocked(Map<?, ?> rules, Object returnedPackages) {
         ContentResolver resolver = activeResolver;
         if (resolver == null || rules == null) return;
 
@@ -288,14 +300,38 @@ public final class SamsungSplitRulesHook {
                 }
             }
         }
+        addPackageNames(packageSet, returnedPackages);
+
+        String current = Settings.Global.getString(
+                resolver, KEY_SPLIT_VIEW_ALLOWED_PACKAGES);
+        if (!embedSnapshotReady && current != null && !current.isEmpty()) {
+            addPackageNames(packageSet, current.split(","));
+        }
         List<String> packages = new ArrayList<>(packageSet);
         Collections.sort(packages);
         String snapshot = String.join(",", packages);
-        String current = Settings.Global.getString(
-                resolver, KEY_SPLIT_VIEW_ALLOWED_PACKAGES);
         if (!snapshot.equals(current)) {
             Settings.Global.putString(
                     resolver, KEY_SPLIT_VIEW_ALLOWED_PACKAGES, snapshot);
+        }
+    }
+
+    private static void addPackageNames(Set<String> packages, Object values) {
+        if (values instanceof String) {
+            String packageName = ((String) values).trim();
+            if (!packageName.isEmpty()) packages.add(packageName);
+            return;
+        }
+        if (values instanceof Iterable<?>) {
+            for (Object value : (Iterable<?>) values) {
+                addPackageNames(packages, value);
+            }
+            return;
+        }
+        if (values instanceof Object[]) {
+            for (Object value : (Object[]) values) {
+                addPackageNames(packages, value);
+            }
         }
     }
 
