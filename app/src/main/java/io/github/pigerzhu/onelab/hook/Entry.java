@@ -35,6 +35,7 @@ public final class Entry implements IXposedHookLoadPackage {
             XhsFoldVideoHook.install(lpparam);
         } else if (HookConstants.TONGCHENG_PACKAGE.equals(lpparam.packageName)) {
             TongchengSplitRulesHook.install(lpparam);
+            ActivityEmbeddingRatioHook.install(lpparam);
         } else if (HookConstants.XIAOMI_SHOP_PACKAGE.equals(lpparam.packageName)) {
             XiaomiShopFoldHook.install(lpparam);
         } else if (HookConstants.FEISHU_PACKAGE.equals(lpparam.packageName)) {
