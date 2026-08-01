@@ -325,12 +325,16 @@ public final class SamsungSplitRulesHook {
                 packageSet.add((String) key);
             }
         }
-        Object embedded = HookUtils.findFieldValue(
-                activeEmbedRepository, "mRepository");
-        if (embedded instanceof Iterable<?>) {
-            for (Object value : (Iterable<?>) embedded) {
-                if (value instanceof String && !((String) value).isEmpty()) {
-                    packageSet.add((String) value);
+        // The raw repository also contains apps that explicitly reject Samsung's
+        // system override. Use it only until the binder publishes its filtered list.
+        if (!embedSnapshotReady) {
+            Object embedded = HookUtils.findFieldValue(
+                    activeEmbedRepository, "mRepository");
+            if (embedded instanceof Iterable<?>) {
+                for (Object value : (Iterable<?>) embedded) {
+                    if (value instanceof String && !((String) value).isEmpty()) {
+                        packageSet.add((String) value);
+                    }
                 }
             }
         }
