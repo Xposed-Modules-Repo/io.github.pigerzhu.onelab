@@ -20,6 +20,7 @@ import android.widget.TextView;
 
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
+import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
 
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.card.MaterialCardView;
@@ -156,6 +157,7 @@ public final class AppListPage {
         int[] sortMode = {appListPrefs().getInt(
                 PREF_SORT, AppListToolbar.SORT_NAME)};
         boolean[] descending = {appListPrefs().getBoolean(PREF_DESCENDING, false)};
+        boolean[] appScanRunning = {cachedUserApps == null};
         Runnable[] refreshVisibleApps = {() -> {
         }};
 
@@ -206,7 +208,12 @@ public final class AppListPage {
         recycler.setPadding(0, 0, 0, ui.dp(28));
 
         FrameLayout listHost = new FrameLayout(host);
-        listHost.addView(recycler, new FrameLayout.LayoutParams(
+        SwipeRefreshLayout swipeRefresh = new SwipeRefreshLayout(host);
+        swipeRefresh.setColorSchemeColors(ui.colorPrimary);
+        swipeRefresh.setProgressBackgroundColorSchemeColor(ui.colorSurfaceContainer);
+        swipeRefresh.addView(recycler, new ViewGroup.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+        listHost.addView(swipeRefresh, new FrameLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
         page.addView(listHost, new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f));
@@ -261,6 +268,7 @@ public final class AppListPage {
             applySelection.setVisibility(selection.active ? View.VISIBLE : View.GONE);
             applySelection.setText(batchAction.actionText(count));
             applySelection.setEnabled(count > 0);
+            swipeRefresh.setEnabled(!selection.active);
         };
         cancelSelection.setOnClickListener(v -> {
             selection.active = false;
@@ -302,6 +310,25 @@ public final class AppListPage {
             updateSelectionUi.run();
             batchAction.onAppsSelected(selectedApps, () -> adapter[0].notifyDataSetChanged());
         });
+        swipeRefresh.setOnRefreshListener(() -> {
+            if (appScanRunning[0]) {
+                swipeRefresh.setRefreshing(false);
+                return;
+            }
+            appScanRunning[0] = true;
+            new Thread(() -> {
+                List<AppEntry> apps = loadUserApps();
+                host.runOnUiThread(() -> {
+                    cachedUserApps = apps;
+                    appScanRunning[0] = false;
+                    selection.active = false;
+                    selection.selected.clear();
+                    refreshVisibleApps[0].run();
+                    updateSelectionUi.run();
+                    swipeRefresh.setRefreshing(false);
+                });
+            }, "OneLab-AppListRefresh").start();
+        });
         updateSelectionUi.run();
 
         if (cachedUserApps != null) {
@@ -318,6 +345,7 @@ public final class AppListPage {
             List<AppEntry> apps = loadUserApps();
             host.runOnUiThread(() -> {
                 cachedUserApps = apps;
+                appScanRunning[0] = false;
                 listHost.removeView(loading);
                 adapter[0] = new AppListAdapter(
                         orderApps(filteredApps(apps, filter),
