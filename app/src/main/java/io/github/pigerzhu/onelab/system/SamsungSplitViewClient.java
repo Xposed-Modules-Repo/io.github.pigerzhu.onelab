@@ -5,9 +5,7 @@ import static io.github.pigerzhu.onelab.contract.SettingsKeys.KEY_SPLIT_VIEW_ALL
 import java.util.LinkedHashSet;
 import java.util.Set;
 
-import io.github.pigerzhu.onelab.contract.SplitViewRatioPackages;
-
-/** Combines Samsung split packages with apps supported by an app-side ratio engine. */
+/** Reads the split-activity package snapshot published by the system-server hook. */
 public final class SamsungSplitViewClient {
     private final SettingsStore settings;
 
@@ -24,7 +22,6 @@ public final class SamsungSplitViewClient {
                 packages.add(packageName);
             }
         }
-        packages.addAll(SplitViewRatioPackages.APP_SIDE_PACKAGES);
         return packages;
     }
 }

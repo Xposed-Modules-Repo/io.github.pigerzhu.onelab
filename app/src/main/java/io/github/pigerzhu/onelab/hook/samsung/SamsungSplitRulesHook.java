@@ -33,6 +33,8 @@ public final class SamsungSplitRulesHook {
     private static final String ONE_UI_8_5_CONTROLLER_CLASS =
             "com.android.server.wm.SplitActivityController";
     private static final String LEGACY_CONTROLLER_FIELD = "mMultiTaskingController";
+    private static final String MULTI_TASKING_CORE_FIELD = "mMultiTaskingCore";
+    private static final String TONGCHENG_PACKAGE = "com.tongcheng.android";
     private static final String ONE_UI_8_5_CONTROLLER_FIELD = "mSplitActivityController";
     private static final String BINDER_CLASS =
             "com.android.server.wm.MultiTaskingBinder";
@@ -148,6 +150,11 @@ public final class SamsungSplitRulesHook {
                     "getSupportEmbedActivityPackages",
                     new XC_MethodHook() {
                         @Override
+                        protected void beforeHookedMethod(MethodHookParam param) {
+                            initializeFromBinder(param.thisObject);
+                        }
+
+                        @Override
                         protected void afterHookedMethod(MethodHookParam param) {
                             initializeFromBinder(param.thisObject);
                             synchronized (LOCK) {
@@ -177,9 +184,36 @@ public final class SamsungSplitRulesHook {
                 : HookUtils.findFieldValue(atm, path.fieldName);
         Object multiTaskingController =
                 HookUtils.findFieldValue(atm, LEGACY_CONTROLLER_FIELD);
+        if (multiTaskingController == null) {
+            multiTaskingController = HookUtils.findFieldValue(
+                    atm, MULTI_TASKING_CORE_FIELD);
+        }
         activeEmbedRepository = HookUtils.findFieldValue(
                 multiTaskingController, "mActivityEmbeddedPackageRepository");
+        registerTongchengEmbedSupport(atm);
         if (controller != null) initialize(controller);
+    }
+
+    private static void registerTongchengEmbedSupport(Object atm) {
+        Object repository = activeEmbedRepository;
+        if (repository == null || !isPackageInstalled(atm, TONGCHENG_PACKAGE)) return;
+        try {
+            XposedHelpers.callMethod(repository, "add", TONGCHENG_PACKAGE);
+        } catch (Throwable throwable) {
+            XposedBridge.log(TAG + ": failed to register Tongcheng embed support");
+            XposedBridge.log(throwable);
+        }
+    }
+
+    private static boolean isPackageInstalled(Object atm, String packageName) {
+        try {
+            Object context = HookUtils.findFieldValue(atm, "mContext");
+            Object packageManager = XposedHelpers.callMethod(context, "getPackageManager");
+            XposedHelpers.callMethod(packageManager, "getPackageInfo", packageName, 0);
+            return true;
+        } catch (Throwable ignored) {
+            return false;
+        }
     }
 
     private static void initialize(Object controller) {
