@@ -3,7 +3,12 @@ package io.github.pigerzhu.onelab.hook.applications;
 import io.github.pigerzhu.onelab.hook.core.HookUtils;
 
 import android.app.Application;
+import android.content.ContentResolver;
 import android.content.Context;
+import android.database.ContentObserver;
+import android.os.Handler;
+import android.os.Looper;
+import android.provider.Settings;
 import android.util.Log;
 
 import java.util.Collections;
@@ -53,7 +58,8 @@ public final class BiliFoldGateHook {
         }
 
         try {
-            boolean enabled = isEnabled(context);
+            AtomicBoolean enabled = new AtomicBoolean(isEnabled(context));
+            observeEnabledSetting(context, enabled);
             Class<?> configClass = classLoader.loadClass(KCONFIG_CLASS);
             XposedHelpers.findAndHookMethod(
                     configClass,
@@ -63,7 +69,7 @@ public final class BiliFoldGateHook {
                     new XC_MethodHook() {
                         @Override
                         protected void afterHookedMethod(MethodHookParam param) {
-                            if (!enabled
+                            if (!enabled.get()
                                     || !LARGE_SCREEN_KEY.equals(param.args[0])
                                     || !"off".equals(param.getResult())) {
                                 return;
@@ -82,6 +88,19 @@ public final class BiliFoldGateHook {
             XposedBridge.log(TAG + ": KConfig hook installation failed");
             XposedBridge.log(t);
         }
+    }
+
+    private static void observeEnabledSetting(Context context, AtomicBoolean enabled) {
+        ContentResolver resolver = context.getContentResolver();
+        resolver.registerContentObserver(
+                Settings.Global.getUriFor(SettingsKeys.KEY_ENABLE_BILI_FOLD_GATE),
+                false,
+                new ContentObserver(new Handler(Looper.getMainLooper())) {
+                    @Override
+                    public void onChange(boolean selfChange) {
+                        enabled.set(isEnabled(context));
+                    }
+                });
     }
 
     private static boolean isEnabled(Context context) {
