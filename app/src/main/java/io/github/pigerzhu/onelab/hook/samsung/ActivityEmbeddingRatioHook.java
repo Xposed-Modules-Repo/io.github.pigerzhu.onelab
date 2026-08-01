@@ -42,6 +42,17 @@ public final class ActivityEmbeddingRatioHook {
     }
 
     public static void install(XC_LoadPackage.LoadPackageParam lpparam) {
+        install(lpparam, false);
+    }
+
+    public static void installIfConfigured(XC_LoadPackage.LoadPackageParam lpparam) {
+        install(lpparam, true);
+    }
+
+    private static void install(
+            XC_LoadPackage.LoadPackageParam lpparam,
+            boolean requireConfiguredRatio
+    ) {
         XposedHelpers.findAndHookMethod(
                 Application.class,
                 "attach",
@@ -50,12 +61,23 @@ public final class ActivityEmbeddingRatioHook {
                     @Override
                     protected void afterHookedMethod(MethodHookParam param) {
                         Context context = (Context) param.args[0];
+                        if (requireConfiguredRatio
+                                && !hasConfiguredRatio(
+                                context.getContentResolver(), lpparam.packageName)) {
+                            return;
+                        }
                         installForClassLoader(
                                 context,
                                 context.getClassLoader(),
                                 lpparam.packageName);
                     }
                 });
+    }
+
+    private static boolean hasConfiguredRatio(ContentResolver resolver, String packageName) {
+        Map<String, Float> values = SplitViewRatioOverrides.parse(
+                Settings.Global.getString(resolver, KEY_SPLIT_VIEW_RATIO_OVERRIDES));
+        return values.containsKey(packageName);
     }
 
     private static void installForClassLoader(

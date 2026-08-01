@@ -135,6 +135,19 @@ public final class AppListPage {
             BatchAction batchAction,
             AppFilter filter
     ) {
+        show(title, subtitle, statusProvider, listener, priority, batchAction, filter, null);
+    }
+
+    public void show(
+            String title,
+            String subtitle,
+            AppStatusProvider statusProvider,
+            AppClickListener listener,
+            AppPriority priority,
+            BatchAction batchAction,
+            AppFilter filter,
+            Runnable helpAction
+    ) {
         host.setShowingHomePage(false);
         Runnable parentBackAction = host.getNestedBackAction();
         SelectionState selection = new SelectionState();
@@ -174,7 +187,8 @@ public final class AppListPage {
                             .putBoolean(PREF_DESCENDING, reversed)
                             .apply();
                     refreshVisibleApps[0].run();
-                });
+                },
+                helpAction);
         page.addView(toolbar.view(), new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ui.dp(64)));
 

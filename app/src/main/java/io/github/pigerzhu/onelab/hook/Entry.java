@@ -52,6 +52,8 @@ public final class Entry implements IXposedHookLoadPackage {
             SamsungSplitRatioHook.install(lpparam);
             SamsungSplitRulesHook.install(lpparam);
             RefreshRateHook.install(lpparam);
+        } else {
+            ActivityEmbeddingRatioHook.installIfConfigured(lpparam);
         }
     }
 }

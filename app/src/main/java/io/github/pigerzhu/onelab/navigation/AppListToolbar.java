@@ -38,11 +38,13 @@ public final class AppListToolbar {
     private final Runnable parentBackAction;
     private final Consumer<String> queryChanged;
     private final SortListener sortChanged;
+    private final Runnable helpAction;
 
     private final LinearLayout view;
     private final TextView titleView;
     private final EditText searchInput;
     private final ImageButton searchButton;
+    private final ImageButton helpButton;
     private final ImageButton moreButton;
     private final ImageButton closeSearchButton;
     private int sortMode;
@@ -57,7 +59,8 @@ public final class AppListToolbar {
             int initialSortMode,
             boolean initialDescending,
             Consumer<String> queryChanged,
-            SortListener sortChanged
+            SortListener sortChanged,
+            Runnable helpAction
     ) {
         this.host = host;
         this.ui = ui;
@@ -66,6 +69,7 @@ public final class AppListToolbar {
         this.descending = initialDescending;
         this.queryChanged = queryChanged;
         this.sortChanged = sortChanged;
+        this.helpAction = helpAction;
 
         view = new LinearLayout(host);
         view.setGravity(Gravity.CENTER_VERTICAL);
@@ -96,10 +100,13 @@ public final class AppListToolbar {
                 0, ViewGroup.LayoutParams.MATCH_PARENT, 1));
 
         searchButton = button(R.drawable.ic_search, "搜索");
+        helpButton = button(R.drawable.ic_info, "使用帮助");
+        helpButton.setVisibility(helpAction == null ? View.GONE : View.VISIBLE);
         moreButton = button(R.drawable.ic_more_vert, "排序");
         closeSearchButton = button(R.drawable.ic_close, "关闭搜索");
         closeSearchButton.setVisibility(View.GONE);
         view.addView(searchButton, new LinearLayout.LayoutParams(ui.dp(52), ui.dp(52)));
+        view.addView(helpButton, new LinearLayout.LayoutParams(ui.dp(44), ui.dp(52)));
         view.addView(moreButton, new LinearLayout.LayoutParams(ui.dp(44), ui.dp(52)));
         view.addView(closeSearchButton, new LinearLayout.LayoutParams(ui.dp(52), ui.dp(52)));
 
@@ -113,6 +120,9 @@ public final class AppListToolbar {
         });
         closeSearchButton.setOnClickListener(v -> closeSearch());
         searchButton.setOnClickListener(v -> openSearch());
+        helpButton.setOnClickListener(v -> {
+            if (helpAction != null) helpAction.run();
+        });
         moreButton.setOnClickListener(v -> showSortMenu());
         searchInput.addTextChangedListener(new TextWatcher() {
             @Override
@@ -139,6 +149,7 @@ public final class AppListToolbar {
         host.setPredictiveParentPreviewEnabled(false);
         titleView.setVisibility(View.GONE);
         searchButton.setVisibility(View.GONE);
+        helpButton.setVisibility(View.GONE);
         moreButton.setVisibility(View.GONE);
         searchInput.setVisibility(View.VISIBLE);
         closeSearchButton.setVisibility(View.VISIBLE);
@@ -156,6 +167,7 @@ public final class AppListToolbar {
         closeSearchButton.setVisibility(View.GONE);
         titleView.setVisibility(View.VISIBLE);
         searchButton.setVisibility(View.VISIBLE);
+        helpButton.setVisibility(helpAction == null ? View.GONE : View.VISIBLE);
         moreButton.setVisibility(View.VISIBLE);
         host.setNestedBackAction(parentBackAction);
         keyboard().hideSoftInputFromWindow(searchInput.getWindowToken(), 0);

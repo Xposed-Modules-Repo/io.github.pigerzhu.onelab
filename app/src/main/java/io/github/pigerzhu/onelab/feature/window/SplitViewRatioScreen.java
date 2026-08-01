@@ -111,8 +111,21 @@ public final class SplitViewRatioScreen {
                                 apps, null, refreshList);
                     }
                 },
-                app -> allowedPackages.contains(app.packageName)
+                app -> allowedPackages.contains(app.packageName),
+                this::showHelp
         );
+    }
+
+    private void showHelp() {
+        new AlertDialog.Builder(host)
+                .setTitle("比例设置不生效？")
+                .setMessage("请先强制停止并重新打开目标应用。\n\n"
+                        + "如果仍未生效，请将该应用加入 OneLab 的 LSPosed 作用域，"
+                        + "再强制停止并重新打开应用。\n\n"
+                        + "部分应用使用自定义分栏方式，可能仍不支持比例调整。"
+                        + "支付、银行等敏感应用不建议加入作用域。")
+                .setPositiveButton("知道了", null)
+                .show();
     }
 
     private String status(AppListPage.AppEntry app) {
