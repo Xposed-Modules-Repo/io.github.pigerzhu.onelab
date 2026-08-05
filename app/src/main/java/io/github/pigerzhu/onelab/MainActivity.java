@@ -21,6 +21,7 @@ import com.google.android.material.color.DynamicColors;
 
 import java.util.ArrayDeque;
 
+import io.github.pigerzhu.onelab.feature.applications.BaiduLargeScreenScreen;
 import io.github.pigerzhu.onelab.feature.applications.BiliFoldGateScreen;
 import io.github.pigerzhu.onelab.feature.applications.CtripSplitRulesScreen;
 import io.github.pigerzhu.onelab.feature.applications.MeituanSplitRulesScreen;
@@ -34,6 +35,7 @@ import io.github.pigerzhu.onelab.feature.connectivity.NetworkScreen;
 import io.github.pigerzhu.onelab.feature.diagnostics.DiagnosticsScreen;
 import io.github.pigerzhu.onelab.feature.experiment.GalleryLabsScreen;
 import io.github.pigerzhu.onelab.feature.performance.GameHeatScreen;
+import io.github.pigerzhu.onelab.feature.performance.PassThroughChargingScreen;
 import io.github.pigerzhu.onelab.feature.performance.ProcessingSpeedScreen;
 import io.github.pigerzhu.onelab.feature.performance.ThermalScreen;
 import io.github.pigerzhu.onelab.feature.window.AspectRatioScreen;
@@ -58,6 +60,7 @@ public class MainActivity extends Activity {
     private Ui ui;
     private NetworkScreen networkScreen;
     private GalleryLabsScreen galleryLabsScreen;
+    private BaiduLargeScreenScreen baiduLargeScreenScreen;
     private BiliFoldGateScreen biliFoldGateScreen;
     private CtripSplitRulesScreen ctripSplitRulesScreen;
     private UmetripSplitRulesScreen umetripSplitRulesScreen;
@@ -69,6 +72,7 @@ public class MainActivity extends Activity {
     private XhsFoldVideoScreen xhsFoldVideoScreen;
     private WindowManagementScreen windowManagementScreen;
     private ProcessingSpeedScreen processingSpeedScreen;
+    private PassThroughChargingScreen passThroughChargingScreen;
     private CoverScreen coverScreen;
     private CoverEdgeScreen coverEdgeScreen;
     private ThermalScreen thermalScreen;
@@ -104,6 +108,7 @@ public class MainActivity extends Activity {
         SettingsStore settings = new SettingsStore(this);
         networkScreen = new NetworkScreen(this, ui, settings);
         galleryLabsScreen = new GalleryLabsScreen(this, ui, settings);
+        baiduLargeScreenScreen = new BaiduLargeScreenScreen(this, ui, settings);
         biliFoldGateScreen = new BiliFoldGateScreen(this, ui, settings);
         ctripSplitRulesScreen = new CtripSplitRulesScreen(this, ui, settings);
         umetripSplitRulesScreen = new UmetripSplitRulesScreen(this, ui, settings);
@@ -116,6 +121,7 @@ public class MainActivity extends Activity {
         xhsFoldVideoScreen = new XhsFoldVideoScreen(this, ui, settings);
         windowManagementScreen = new WindowManagementScreen(this, ui, settings);
         processingSpeedScreen = new ProcessingSpeedScreen(this, ui, settings);
+        passThroughChargingScreen = new PassThroughChargingScreen(this, ui);
         thermalScreen = new ThermalScreen(this, ui, settings);
         gameHeatScreen = new GameHeatScreen(this, ui, settings);
         coverScreen = new CoverScreen(this, ui);
@@ -174,6 +180,7 @@ public class MainActivity extends Activity {
         if (coverScreen != null) coverScreen.onDestroy();
         if (coverEdgeScreen != null) coverEdgeScreen.onDestroy();
         if (processingSpeedScreen != null) processingSpeedScreen.onDestroy();
+        if (passThroughChargingScreen != null) passThroughChargingScreen.onDestroy();
         if (diagnosticsScreen != null) diagnosticsScreen.onDestroy();
         super.onDestroy();
     }
@@ -322,6 +329,7 @@ public class MainActivity extends Activity {
                 "性能与温控", "处理速度和隐藏温控。",
                 animateBack ? -1 : topLevelEnterDirection());
         root.addView(thermalScreen.sdhmsThermalMasterCard());
+        root.addView(passThroughChargingScreen.card());
         root.addView(thermalScreen.sdhmsHiddenThermalCard());
         root.addView(processingSpeedScreen.card());
     }
@@ -355,16 +363,17 @@ public class MainActivity extends Activity {
         nestedBackAction = null;
         LinearLayout root = beginSubPage(
                 "应用程序", "应用功能扩展。", topLevelEnterDirection());
-        root.addView(galleryLabsScreen.card());
         root.addView(biliFoldGateScreen.card());
+        root.addView(xhsFoldVideoScreen.card());
+        root.addView(qqFoldLayoutScreen.card());
+        root.addView(xiaomiShopFoldScreen.card());
+        root.addView(baiduLargeScreenScreen.card());
         root.addView(ctripSplitRulesScreen.card());
         root.addView(umetripSplitRulesScreen.card());
         root.addView(meituanSplitRulesScreen.card());
         root.addView(zhuanzhuanSplitRulesScreen.card());
-        root.addView(qqFoldLayoutScreen.card());
-        root.addView(xhsFoldVideoScreen.card());
         root.addView(tongchengSplitRulesScreen.card());
-        root.addView(xiaomiShopFoldScreen.card());
+        root.addView(galleryLabsScreen.card());
     }
 
     private void showExperimentsPage() {
