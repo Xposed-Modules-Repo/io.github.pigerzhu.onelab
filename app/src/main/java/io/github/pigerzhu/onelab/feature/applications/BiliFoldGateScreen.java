@@ -1,6 +1,7 @@
 package io.github.pigerzhu.onelab.feature.applications;
 
 import io.github.pigerzhu.onelab.MainActivity;
+import io.github.pigerzhu.onelab.R;
 
 import static io.github.pigerzhu.onelab.contract.SettingsKeys.KEY_ENABLE_BILI_FOLD_GATE;
 import static io.github.pigerzhu.onelab.contract.SettingsKeys.KEY_ENABLE_BILI_TABLET_LAYOUT;
@@ -12,6 +13,7 @@ import com.google.android.material.card.MaterialCardView;
 import com.google.android.material.materialswitch.MaterialSwitch;
 
 import io.github.pigerzhu.onelab.system.SettingsStore;
+import io.github.pigerzhu.onelab.ui.ExpandableSwitchGroup;
 import io.github.pigerzhu.onelab.ui.Ui;
 
 public final class BiliFoldGateScreen {
@@ -30,7 +32,7 @@ public final class BiliFoldGateScreen {
         LinearLayout body = ui.cardBody();
         card.addView(body);
 
-        body.addView(ui.text("哔哩哔哩折叠屏适配", 20, true, ui.colorOnSurface));
+        body.addView(ui.text(host.getString(R.string.bili_fold_title), 20, true, ui.colorOnSurface));
         ui.addSpace(body, 8);
 
         boolean gateEnabled =
@@ -46,11 +48,18 @@ public final class BiliFoldGateScreen {
             settings.setGlobal(KEY_ENABLE_BILI_FOLD_GATE, enabled ? "1" : "0");
             tabletToggle.setEnabled(enabled);
         });
-        body.addView(ui.switchRow("B 站原生大屏适配", null, gateToggle));
-
         tabletToggle.setOnCheckedChangeListener((button, enabled) ->
                 settings.setGlobal(KEY_ENABLE_BILI_TABLET_LAYOUT, enabled ? "1" : "0"));
-        body.addView(ui.switchRow("使用平板布局", null, tabletToggle));
+        View tabletRow = ui.switchRow(
+                host.getString(R.string.bili_fold_tablet), null, tabletToggle, 15);
+        tabletRow.setPadding(ui.dp(40), 0, 0, 0);
+        body.addView(new ExpandableSwitchGroup(
+                host,
+                ui,
+                host.getString(R.string.bili_fold_native),
+                null,
+                gateToggle,
+                tabletRow));
 
         return card;
     }
