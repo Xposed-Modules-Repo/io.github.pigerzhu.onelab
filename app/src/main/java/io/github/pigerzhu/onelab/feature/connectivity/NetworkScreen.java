@@ -6,6 +6,7 @@ import io.github.pigerzhu.onelab.R;
 import static io.github.pigerzhu.onelab.contract.SettingsKeys.DEFAULT_CAPTIVE_DELAY_MS;
 import static io.github.pigerzhu.onelab.contract.SettingsKeys.KEY_CAPTIVE_DELAY_MS;
 import static io.github.pigerzhu.onelab.contract.SettingsKeys.KEY_ENABLE_CAPTIVE_KEEPER;
+import static io.github.pigerzhu.onelab.contract.SettingsKeys.KEY_ENABLE_CONNECTIVITY_LABS_ZH_CN;
 
 import android.view.Gravity;
 import android.view.View;
@@ -51,15 +52,13 @@ public final class NetworkScreen {
                 0, ViewGroup.LayoutParams.WRAP_CONTENT, 1));
         copy.addView(ui.text(host.getString(R.string.captive_keeper_title), 20, true,
                 ui.colorOnSurface));
-        copy.addView(ui.text(host.getString(R.string.captive_keeper_summary), 14, false,
-                ui.colorOnSurfaceVariant));
 
         MaterialSwitch toggle = new MaterialSwitch(host);
         toggle.setChecked(isKeeperEnabled());
         toggle.setOnCheckedChangeListener((button, enabled) -> {
-            settings.setGlobal(KEY_ENABLE_CAPTIVE_KEEPER, enabled ? "1" : "0");
+            settings.setGlobalAsync(KEY_ENABLE_CAPTIVE_KEEPER, enabled ? "1" : "0");
             if (enabled && getDelayMs() <= 0L) {
-                settings.setGlobal(KEY_CAPTIVE_DELAY_MS, String.valueOf(DEFAULT_CAPTIVE_DELAY_MS));
+                settings.setGlobalAsync(KEY_CAPTIVE_DELAY_MS, String.valueOf(DEFAULT_CAPTIVE_DELAY_MS));
             }
         });
         header.addView(toggle);
@@ -86,11 +85,28 @@ public final class NetworkScreen {
             @Override
             public void onStopTrackingTouch(Slider slider) {
                 int step = Math.round(slider.getValue());
-                settings.setGlobal(KEY_CAPTIVE_DELAY_MS, String.valueOf(delayMsFromStep(step)));
+                settings.setGlobalAsync(KEY_CAPTIVE_DELAY_MS, String.valueOf(delayMsFromStep(step)));
             }
         });
         body.addView(slider, ui.matchWrap());
         updateDelayValue(Math.round(slider.getValue()));
+        return card;
+    }
+
+    public View labsTranslationCard() {
+        MaterialCardView card = ui.card();
+        LinearLayout body = ui.cardBody();
+        card.addView(body);
+
+        MaterialSwitch labsTranslation = new MaterialSwitch(host);
+        labsTranslation.setChecked("1".equals(settings.getGlobal(
+                KEY_ENABLE_CONNECTIVITY_LABS_ZH_CN, "0")));
+        labsTranslation.setOnCheckedChangeListener((button, enabled) -> settings.setGlobalAsync(
+                KEY_ENABLE_CONNECTIVITY_LABS_ZH_CN, enabled ? "1" : "0"));
+        body.addView(ui.switchRow(
+                host.getString(R.string.connectivity_labs_zh_cn),
+                null,
+                labsTranslation));
         return card;
     }
 
